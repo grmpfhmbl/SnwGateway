@@ -35,7 +35,7 @@
     <logger name="application.actors.ActorMqtt" level="DEBUG"/>
     <!--<logger name="application.actors.ActorSupervisor" level="INFO"/>-->
 
-    <!--<logger name="application.models" level="WARN"/>-->
+    <logger name="application.models" level="WARN"/>
 
     <!--<logger name="application.utils" level="INFO"/>-->
     <!--<logger name="application.utils.WaspProcess" level="INFO"/>-->

@@ -44,7 +44,6 @@ object Global extends GlobalSettings with MyLogger {
             case _ => config.getString(key).get
           }
         }
-
       logger.debug(f"${key}%45s = ${cfgVal}")
     }
 
@@ -62,50 +61,21 @@ object Global extends GlobalSettings with MyLogger {
     //TODO SREI think of better startup sequence / waiting time
     if (subConfig.getBoolean("xbee.gateway.enabled").getOrElse(false)) {
       Akka.system().scheduler.scheduleOnce(10.seconds, actorSupervisor,CmdGetOrStart(XBeeActor.ActorName))
-/*
-      actorSupervisor ? CmdGetOrStart(XBeeActor.ActorName) andThen {
-        case scala.util.Success(result) => logger.info("XBeeActor started by global as '%s'".format(result))
-        case scala.util.Failure(ex) => logger.error("Could not start XBeeActor from Global", ex)
-      }
-*/
     }
     if (subConfig.getBoolean("uplink.mqtt.enabled").getOrElse(false)) {
       Akka.system().scheduler.scheduleOnce(30.seconds, actorSupervisor,CmdGetOrStart(ActorMqtt.ActorName))
-/*
-      actorSupervisor ? CmdGetOrStart(ActorMqtt.ActorName) andThen {
-        case scala.util.Success(result) => logger.info("MqttActor started by global as '%s'".format(result))
-        case scala.util.Failure(ex) => logger.error("Could not start MqttActor from Global", ex)
-      }
-*/
 
     if (subConfig.getBoolean("uplink.sos.enabled").getOrElse(false)) {
       Akka.system().scheduler.scheduleOnce(60.seconds, actorSupervisor,CmdGetOrStart(SosActor.ActorName))
-      /*
-            actorSupervisor ? CmdGetOrStart(SosActor.ActorName) andThen {
-              case scala.util.Success(result) => logger.info("MqttActor started by global as '%s'".format(result))
-              case scala.util.Failure(ex) => logger.error("Could not start MqttActor from Global", ex)
-            }
-      */
     }
 
     if (subConfig.getBoolean("wiz.enabled").getOrElse(false)) {
       Akka.system().scheduler.scheduleOnce(90.seconds, actorSupervisor,CmdGetOrStart(WizActor.ActorName))
-/*
-      actorSupervisor ? CmdGetOrStart(WizActor.ActorName) andThen {
-        case scala.util.Success(result) => logger.info("WizActor started by global as '%s'".format(result))
-        case scala.util.Failure(ex) => logger.error("Could not start MqttActor from Global", ex)
-      }
-*/
     }
 
     }
 
     /*
-
-        // just a tick, maybe we need it for something :-p
-        val cancelTik = Akka.system.scheduler.schedule(10.seconds, 60.seconds, actorSupervisor, "tick")
-
-
         if (play.Play.application.configuration.getString("sensorweb.moxa.spa.enabled").equalsIgnoreCase("true")) {
           val cancelSpaStart = Akka.system.scheduler.scheduleOnce(5.seconds, actorSupervisor, SpaActorCommand(1, "start"))
         }

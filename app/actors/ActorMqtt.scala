@@ -20,14 +20,13 @@ package actors
 import java.net.InetSocketAddress
 import java.util.UUID
 
-import actors.ActorMqtt.CmdMqttPublish
+import actors.ActorMqtt.{CmdConnect, CmdMqttPublish}
 import actors.ActorSupervisor.CmdStatus
 import actors.MqttGetCapabilitiesResp
 import actors.WizActor.SetMeasurementFrequency
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, ActorSelection, Props}
 import net.sigusr.mqtt.api._
 import play.api.Configuration
-import play.api.libs.concurrent.Akka
 import play.api.libs.json.Json
 import utils.MyLogger
 
@@ -35,7 +34,10 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
-import scala.util.{Success, Failure}
+import play.libs.Akka
+
+import scala.collection.mutable
+import scala.util.{Failure, Success}
 
 /**
  * These traits / objects hold the prefixes for different services
@@ -72,11 +74,17 @@ object SensorwebEventStatus extends MqttPrefixes {
   val topic = "event/status"
 }
 
+object SensorwebObservations extends MqttPrefixes {
+  val topic = "observations"
+}
+
 
 object ActorMqtt {
   val ActorName = "mqtt"
 
   case class CmdMqttPublish(msgType: MqttPrefix, topic: String, body: String, retain: Boolean)
+
+  case class CmdConnect()
 
   def props(config: Configuration) = Props(new ActorMqtt(config = config))
 }
@@ -85,17 +93,19 @@ object ActorMqtt {
  * Provides a connection to an MQTT broker
  */
 class ActorMqtt(config: Configuration) extends Actor with MyLogger {
-  lazy val wizActorSel =context.system.actorSelection(s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
-  lazy val procexecActorSel = context.system.actorSelection(s"/user/${ActorSupervisor.ActorName }/${ProcessExecActor.ActorName }")
+  lazy val wizActorSel: ActorSelection =context.system.actorSelection(s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
+  lazy val procexecActorSel: ActorSelection = context.system.actorSelection(s"/user/${ActorSupervisor.ActorName }/${ProcessExecActor.ActorName }")
 
   //read config
-  val host = config.getString("host").getOrElse("localhost")
-  val port = config.getInt("port").getOrElse(1883)
-  val clientId = config.getString("clientid").getOrElse("gateway")
-  val user = config.getString("username")
-  val password = config.getString("password")
-  val topicSubscribePrefix = config.getStringList("topic.prefix.subscribe").get.asScala
-  val topicPublishPrefix = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
+  val host: String = config.getString("host").getOrElse("localhost")
+  val port: Int = config.getInt("port").getOrElse(1883)
+  val clientId: String = config.getString("clientid").getOrElse("gateway")
+  val user: Option[String] = config.getString("username")
+  val password: Option[String] = config.getString("password")
+  val topicSubscribePrefix: mutable.Buffer[String] = config.getStringList("topic.prefix.subscribe").get.asScala
+  val topicPublishPrefix: String = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
+  val connectRetryTimeout: Int = config.getInt("connectRetryTimeout").getOrElse(60)
+  lazy val managerRef: ActorRef = context.actorOf(Manager.props(new InetSocketAddress(host, port)))
 
   private var lastMessageId = 1
 
@@ -104,13 +114,17 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       1
     else
       lastMessageId + 1
-    return lastMessageId
+    lastMessageId
   }
 
   override def preStart() {
     logger.info("Starting MqttActor")
-    val managerRef = context.actorOf(Manager.props(new InetSocketAddress(host, port)))
-    logger.debug(s"Started MqttManager as ${managerRef}")
+    connect()
+  }
+
+  private def connect(): Unit = {
+    logger.debug(s"Started MqttManager as $managerRef")
+
     managerRef ! Connect(
       clientId = clientId,
       user = user,
@@ -119,8 +133,8 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       will = Option(Will(
         retain = false,
         qos = AtLeastOnce,
-        topic = s"${SensorwebEventStatus.topic}/${topicPublishPrefix}/lastwill",
-        message = s"I disconnected disgracefully. C u lat0r, alligator!")
+        topic = s"${SensorwebEventStatus.topic}/$topicPublishPrefix/lastwill",
+        message = s"I disconnected disgracefully.")
       )
     )
   }
@@ -135,8 +149,14 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       val status = s"${ActorMqtt.ActorName}: running as ${self.path}.\nNot connected."
       sender() ! scala.util.Success(status)
     }
+
+    case CmdConnect => {
+      logger.info("Received CmdConnect")
+      connect()
+    }
+
     case Connected =>
-      logger.info(s"Successfully connected to ${host}:${port}")
+      logger.info(s"Successfully connected to $host:$port")
 
       //SREI ok, a little bit of magic. Take the list, make to vector and zip it with a new vector filled with AtMostOnce
       //TODO SREI we need to think about how to configure this in a more flexible way. At the moment this works, as we're only interested in SPS-Commands
@@ -150,7 +170,11 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       context.become(ready(sender()))
 
     case ConnectionFailure(reason) =>
+      import context.system
+      import scala.concurrent.ExecutionContext.Implicits.global
       logger.error(s"Connection to localhost:1883 failed [$reason]")
+      logger.error(s"Will try again in $connectRetryTimeout seconds.")
+      system.scheduler.scheduleOnce(connectRetryTimeout.seconds, self, CmdConnect)
   }
 
   /**
@@ -171,11 +195,6 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       //TODO SREI implement resent and stuff, in case a message could not be published.
       logger.debug(s"Message with ID ${messageId.identifier} has been published.")
     }
-    /*
-        case Message(`stopTopic`, _) =>
-          mqttManager ! Disconnect
-          context become disconnecting
-    */
 
     //let's implement the shit out of it
     // AKMO missing "sections" list GetCapabilities (even empty req) requests should possible, then return full Capa as default

@@ -108,10 +108,11 @@ object SensorMeasurement extends Object with MyLogger {
   }
 
   // getSelectForSosUpload
-  def getSelectForSosUpload(newOrFailed: Boolean, maxNum: Long): List[SensorMeasurement] = DB.withConnection {
+  def getSelectForSosUpload(fetchFailedObservations: Boolean, maxNum: Long): List[SensorMeasurement] = DB.withConnection {
     implicit connection =>
       // default insert false, -1,
-      val errorcode_query = if (newOrFailed) """sostransmitted=false and soserrorcode=-1""" else """sostransmitted=false and soserrorcode>0"""
+      val errorcode_query = if (!fetchFailedObservations) """sostransmitted=false and soserrorcode=-1"""else """sostransmitted=false and soserrorcode>0"""
+      //FIXME technically this could lead to SQL injection!
       val query = s"select * from sensormeasurements where $errorcode_query order by meastime desc LIMIT $maxNum"
       logger.info(query)
       val getAllFailedSosUploadQuery: SqlQuery = SQL(query)
