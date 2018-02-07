@@ -1,0 +1,16 @@
+[Unit]
+Description=SMART Sensornetwork Gateway. Will run in $INSTALL_DIR
+After=network.target
+BindsTo=h2server.service
+
+[Service]
+User=$USER
+ExecStart=$INSTALL_DIR/bin/gateway2  -mem 256 -Dconfig.file=$INSTALL_DIR/conf/application.conf -Dpidfile.path=$PIDFILE -DapplyEvolutions.default=true -Djava.library.path=/usr/lib/jni/
+ExecStop=/bin/kill -SIGTERM $MAINPID
+ExecStopPost=/bin/rm -f $PIDFILE
+SuccessExitStatus=143
+TimeoutSec=30
+RestartSec=60
+
+[Install]
+WantedBy=default.target

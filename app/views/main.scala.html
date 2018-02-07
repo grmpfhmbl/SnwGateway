@@ -1,0 +1,117 @@
+@* main Template File *@
+@(title: String)(content: Html)
+
+<!DOCTYPE html>
+<html lang=en>
+  <head>
+    <title>Gateway2</title>
+    <meta name="version" content="1.0-SNAPSHOT"/>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Gateway2 (next generation sensor gateway)">
+    <meta name="author" content="Hermann Klug, Alexander Kmoch, Steffen Reichel">
+    <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+
+    <link rel="stylesheet" media="screen" href="@routes.Assets.at("lib/bootstrap/css/bootstrap.css")">
+    
+    <script type="text/javascript" src="@routes.Assets.at("lib/jquery/jquery.js")"></script>
+    <script type="text/javascript" src="@routes.Assets.at("lib/bootstrap/js/bootstrap.js")"></script>
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="container">
+
+      <!-- Static navbar -->
+      <div class="navbar navbar-default" role="navigation">
+        <div class="container-fluid">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="sr-only">Toggle Nav</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="@routes.Application.index()">Home</a>
+          </div>
+          <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+              <li class="dropdown">
+		        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Inventory<span class="caret"></span></a>
+		        <ul class="dropdown-menu" role="menu">
+		          <li><a href="@routes.Application.listInventoryNodes">List Nodes</a></li>
+		          <li><a href="@routes.Application.addNodeForm">Add Node</a></li>
+		          <li><a href="@routes.Application.listInventoryTypes">List Types</a></li>
+		          <li><a href="@routes.Application.addTypeForm">Add Type</a></li>
+		          <li class="divider"></li>
+		          <li><a href="@routes.Application.checkMeasurementCount">Latest Measurements</a></li>
+                  <li><a href="@routes.Application.checkFailedMeasurementCount">Latest Failed Measurements</a></li>
+		        </ul>
+		      </li>
+		      <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Driver Actors Status<span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                  <li><a href="@routes.DriverActorsController.checkTaromActor">Check TaromActor</a></li>
+                  <li><a href="@routes.DriverActorsController.reconnectTaromActor">Start TaromActor via Supervisor</a></li>
+                  <li><a href="@routes.DriverActorsController.callTaromActor("stop")">Stop TaromActor</a></li>
+                  <li class="divider"></li>
+                  <li><a href="@routes.DriverActorsController.checkSpaActor">Check SpaActor Status</a></li>
+                  <li><a href="@routes.DriverActorsController.reconnectSpaActor">Start SpaActor via Supervisor</a></li>
+                  <li><a href="@routes.DriverActorsController.callSpaActor("stop")">Stop SpaActor</a></li>
+                  <li class="divider"></li>
+                  <li><a href="@routes.DriverActorsController.checkXbeeActor">Check XBeeActor Status</a></li>
+                  <li><a href="@routes.DriverActorsController.reconnectXbeeActor">Start XBeeActor via Supervisor</a></li>
+                  <li><a href="@routes.DriverActorsController.callXBeeActor("stop")">Stop XBeeActor</a></li>
+                  <li><a href="@routes.DriverActorsController.callXBeeActor("checkthread")">XBeeActor Wasp Thread Check</a></li>
+                  <li><a href="@routes.DriverActorsController.callXBeeActor("startthread")">XBeeActor Wasp Thread Start</a></li>
+                  <li><a href="@routes.DriverActorsController.callXBeeActor("endthread")">XBeeActor Wasp Thread Kill</a></li>
+                </ul>
+              </li>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">System Actors<span class="caret"></span></a>
+                <ul class="dropdown-menu" role="menu">
+                  <li><a href="@routes.SystemActorsController.checkSosActor">Check SosActor Status</a></li>
+                  <li><a href="@routes.SystemActorsController.reconnectSosActor">Start SosActor via Supervisor</a></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("stop")">Stop SosActor</a></li>
+                  <li class="divider"></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("config")">SosActor initialise Scheduler</a></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("bulkupload")">SosActor initiate Bulk Upload</a></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("redeemupload")">SosActor Try Redeem Failed Uploads</a></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("checkcapa")">SosActor Check Capabilities</a></li>
+                  <li class="divider"></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("bulkuploadtext")">SosActor Bulk SystemLog Upload</a></li>
+                  <li><a href="@routes.SystemActorsController.callSosActor("redeemuploadtext")">SosActor Redeem SystemLog Upload</a></li>
+                  <li class="divider"></li>
+                  <li><a href="@routes.SystemActorsController.callLogActor("Pling, the Message")">Send Msg to Log Actor</a></li>
+                  <li><a href="@routes.SystemActorsController.callDbActor("spa")">Send SPA Data to DbActor (TEST)</a></li>
+                  <li><a href="@routes.SystemActorsController.callDbActor("tarom")">Send Tarom Data to DbActor (TEST)</a></li>
+                  
+                </ul>
+              </li>
+              <li><a href="@routes.Application.checkSysMessages">LastLog</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div><!--/.container-fluid -->
+      </div>
+
+      @content
+      
+    <!-- FOOTER -->
+    <footer>
+        <p>Ver. 1.0-SNAPSHOT, (c) Z_GIS / SMART</p>
+        <p>
+            <a href="http://dev.smart-project.info/opendev/koppl/gateway2">SMART Project Dev</a> (<a href="http://dev.smart-project.info/jenkins/job/gateway2-service/">CI</a>)
+        </p>
+    </footer>
+
+    </div> <!-- /container -->
+
+  </body>
+</html>

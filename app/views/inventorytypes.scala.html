@@ -1,0 +1,41 @@
+@* inventorytypes Template File *@
+@(types: List[SensorType], message: String)
+
+@main("SMART Gateway") {
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">SensorTypes</h3>
+  </div>
+  <div class="panel-body">
+    <p>@message</p>
+
+    <table class="table table-striped"><tbody>
+
+		<tr>
+		  <th>idsensortype: Long</th>
+		  <th>sensid: Long</th>
+		  <th>sensorname: String</th>
+		  <th>placement: Double</th>
+		  <th>phenomenon: String</th>
+		  <th>unit: String</th>
+		  <th>description: String</th>
+		</tr>
+		
+		@for(typen <- types){
+		<tr>
+			<td><a href="@routes.Application.updateTypeForm(typen.idsensortype)">@typen.idsensortype</a></td>
+			<td>@typen.sensid</td>
+			<td>@typen.sensorname</td>
+			<td>@typen.placement</td>
+			<td>@typen.phenomenon</td>
+			<td>@typen.unit</td>
+			<td>@typen.description</td>
+		</tr>	
+		}
+		
+    </tbody></table>
+  </div>
+</div>
+
+}

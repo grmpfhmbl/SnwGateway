@@ -1,0 +1,59 @@
+@* latestMeasurements Template File *@
+@(measurements: List[SensorMeasurement], snodes: List[SensorNode], stypes: List[SensorType], message: String)
+
+@main("SMART Gateway") {
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Latest Measurements (max 1000)</h3>
+  </div>
+  <div class="panel-body">
+    <p>@message</p>
+
+    <table class="table table-striped"><tbody>
+
+        <tr>
+          <th>id: Long</th>
+          <th>meastime: Date</th>
+          <th>rawvalue: Double</th>
+          <th>calcvalue: Double</th>
+          <th>idsensornode: Long</th>
+          <th>idsensortype: Long</th>
+          <th>sostransmitted: Boolean</th>
+          <th>soserrorcode: Long</th>
+        </tr>
+        
+        @for(meas <- measurements){
+        <tr>
+            <td>@meas.idsensormeasurement</td>
+            <td>@meas.meastime.toString()</td>
+            <td>@meas.rawvalue</td>
+            <td>@meas.calcvalue</td>
+            <td>@nodeInfo(meas) (id: @meas.sensornodes_idsensornode)</td>
+            <td>@typesInfo(meas) (id: @meas.sensortypes_idsensortype)</td>
+            <td>@meas.sostransmitted</td>
+            <td>@meas.soserrorcode</td>
+        </tr>   
+        }
+        
+    </tbody></table>
+  </div>
+</div>
+
+}
+
+@typesInfo(meas: SensorMeasurement) = @{
+  val retext = stypes.filter(_.idsensortype == meas.sensortypes_idsensortype)
+  val fina = for {
+      text <- retext
+  } yield text.sensorname + " = " + text.phenomenon + " in " + text.unit
+  fina.mkString(" ")
+}
+
+@nodeInfo(meas: SensorMeasurement) = @{
+  val retext = snodes.filter(_.idsensornode == meas.sensornodes_idsensornode)
+  val fina = for {
+      text <- retext
+  } yield text.name + "/" + text.extendedaddress
+  fina.mkString(" ")
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=H2 Server $VERSION. Will run in $INSTALL_DIR.
+After=network.target
+
+[Service]
+User=$USER
+ExecStart=/usr/bin/java -Xms32m -Xmx64m -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.Server -tcp -tcpAllowOthers -web -webAllowOthers -baseDir "$DATABASE_DIR"
+ExecStop=/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.Server -tcpShutdown tcp://localhost:9092
+TimeoutSec=10
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,49 @@
+@* addNodeForm Template File *@
+@(typeForm: Form[SensorType], message: String, indicator: String)
+
+@import helper._
+
+@main("SMART Gateway") {
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Add new SensorType</h3>
+  </div>
+  <div class="panel-body">
+    
+    @indicator match {
+        case "new" => {
+            
+            @helper.form(action = routes.Application.addTypePost()) {
+              
+              <p class="small">@message</p>
+              <input type="text" id ="idsensortype" name="idsensortype" value="-1">
+              @helper.inputText(typeForm("sensid"))
+              @helper.inputText(typeForm("sensorname"), 'size -> "30")
+              @helper.inputText(typeForm("phenomenon"), 'size -> "30")
+              @helper.inputText(typeForm("description"), 'size -> "45")
+              @helper.inputText(typeForm("placement"))
+              @helper.inputText(typeForm("unit"))
+              <input type="submit" value="Submit" class="btn btn-default"> <a class="btn btn-default" href="@routes.Application.listInventoryTypes()">Cancel</a>
+              
+            }
+        }
+        case "update" => {
+            
+		    @helper.form(action = routes.Application.updateTypePost()) {
+		      
+		       <p class="small">@message</p>
+			  @helper.inputText(typeForm("idsensortype"))
+			  @helper.inputText(typeForm("sensorname"), 'size -> "30")
+              @helper.inputText(typeForm("phenomenon"), 'size -> "30")
+              @helper.inputText(typeForm("description"), 'size -> "45")
+              @helper.inputText(typeForm("placement"))
+              @helper.inputText(typeForm("unit"))
+		      <input type="submit" value="Submit" class="btn btn-default"> <a class="btn btn-default" href="@routes.Application.listInventoryTypes()">Cancel</a>
+		      
+			}
+        }
+    }
+  </div>
+</div>
+}

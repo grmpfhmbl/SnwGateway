@@ -1,0 +1,55 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET         /                               controllers.Application.redir
+
+# local data management stuff
+GET         /gw/start                       controllers.Application.index
+GET         /gw/checkcounts                 controllers.Application.checkMeasurementCount
+GET         /gw/failedMeasurements          controllers.Application.checkFailedMeasurementCount
+GET         /gw/checksysmessages            controllers.Application.checkSysMessages
+GET         /gw/inventorynodes              controllers.Application.listInventoryNodes
+GET         /gw/inventorytypes              controllers.Application.listInventoryTypes
+GET         /gw/nodes/add                   controllers.Application.addNodeForm
+GET         /gw/nodes/update/:id            controllers.Application.updateNodeForm(id: Long)
+POST        /gw/nodes/add                   controllers.Application.addNodePost
+POST        /gw/nodes/update                controllers.Application.updateNodePost
+GET         /gw/types/add                   controllers.Application.addTypeForm
+GET         /gw/types/update/:id            controllers.Application.updateTypeForm(id: Long)
+POST        /gw/types/add                   controllers.Application.addTypePost
+POST        /gw/types/update                controllers.Application.updateTypePost
+
+# manage system actors (eg db, sos upload ... )
+GET         /gw/call-logactor               controllers.SystemActorsController.callLogActor(name: String ?= "sample message")
+GET         /gw/call-dbactor                controllers.SystemActorsController.callDbActor(demo: String ?= "tarom")
+GET         /gw/check-sosactor              controllers.SystemActorsController.checkSosActor
+GET         /gw/reconnect-sosactor          controllers.SystemActorsController.reconnectSosActor
+GET         /gw/call-sosactor               controllers.SystemActorsController.callSosActor(command: String ?= "checkcapa")
+
+# manage driver actors (xbee, tarom ,spa ..
+GET         /gw/check-taromactor            controllers.DriverActorsController.checkTaromActor
+GET         /gw/reconnect-taromactor        controllers.DriverActorsController.reconnectTaromActor
+GET         /gw/call-taromactor             controllers.DriverActorsController.callTaromActor(command: String ?= "fake")
+GET         /gw/check-spaactor              controllers.DriverActorsController.checkSpaActor
+GET         /gw/reconnect-spaactor          controllers.DriverActorsController.reconnectSpaActor
+GET         /gw/call-spamactor              controllers.DriverActorsController.callSpaActor(command: String ?= "fake")
+GET         /gw/check-xbeeactor             controllers.DriverActorsController.checkXbeeActor
+GET         /gw/reconnect-xbeeactor         controllers.DriverActorsController.reconnectXbeeActor
+GET         /gw/call-xbeeactor              controllers.DriverActorsController.callXBeeActor(command: String ?= "startrun")
+
+# Map static resources from the /public folder to the /assets URL path
+GET         /fs/*file                       controllers.Assets.at(path="/public", file)
+
+
+##SREI neue API
+#GET    /gw/webapp                                      --> bringt die angularApp website
+#GET    /gw/api/actor/<name>/<cmd>?<params>             --> geht in den ActorCtrl und von da aus dann weiter
+#POST   /gw/api/actor/<name>/<cmd> mit JSON als payload --> geht in den actorCtrl und von da aus dann weiter
+#GET    /gw/api/nodes/<cmd>?<params>                    --> zum anlegen / ändern von nodes
+#POST   /gw/api/nodes/<cmd>  mit JSON als payload       --> zum anlegen / ändern von nodes (per POST)
+##hier dann noch die api-stubs für OGC-quatsch
+#Map static resources from the /public folder to the /assets URL path
+#GET    /gwfs/*file               controllers.Assets.versioned(path="/public", file: Asset)
+

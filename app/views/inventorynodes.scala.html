@@ -1,0 +1,41 @@
+@* inventorynodes Template File *@
+@(nodes: List[SensorNode], message: String)
+
+@main("SMART Gateway") {
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">SensorNodes</h3>
+  </div>
+  <div class="panel-body">
+    <p>@message</p>
+
+	<table class="table table-striped"><tbody>
+	
+		<tr>
+		  <th>idsensornode: Long</th>
+		  <th>extendedaddress: String</th>
+		  <th>name: String</th>
+		  <th>description: String</th>
+		  <th>latitude: Double</th>
+		  <th>longitude: Double</th>
+		  <th>altitude: Double</th>
+		</tr>
+		
+		@for(node <- nodes){
+		<tr>
+			<td><a href="@routes.Application.updateNodeForm(node.idsensornode)">@node.idsensornode</a></td>
+			<td>@node.extendedaddress</td>
+			<td>@node.name</td>
+			<td>@node.description</td>
+			<td>@node.latitude</td>
+			<td>@node.longitude</td>
+			<td>@node.altitude</td>
+		</tr>	
+		}
+		
+	</tbody></table>
+  </div>
+</div>
+
+}
