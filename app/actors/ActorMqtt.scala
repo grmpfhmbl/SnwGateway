@@ -183,20 +183,26 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
    * @return
    */
   def ready(mqttManager: ActorRef): Receive = {
+
     case CmdStatus => {
       logger.info("Received CmdStatus")
       val status = s"${ActorMqtt.ActorName}: running as ${self.path}.\nConnected via ${mqttManager.path}"
+      logger.info(status)
       sender() ! scala.util.Success(status)
     }
     case Subscribed(vQoS, MessageId(1)) => {
       logger.info(s"Successfully subscribed to ${topicSubscribePrefix}")
     }
+
     case Published(messageId) => {
       //TODO SREI implement resent and stuff, in case a message could not be published.
       logger.debug(s"Message with ID ${messageId.identifier} has been published.")
     }
 
-    //let's implement the shit out of it
+    case Error(kind) => {
+      logger.warn(s"Error $kind.")
+    }
+
     // AKMO missing "sections" list GetCapabilities (even empty req) requests should possible, then return full Capa as default
       /*
       tested with:
@@ -461,6 +467,7 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
         }
       }
     }
+
     case CmdMqttPublish(msgType, topic, body, retain) => {
       logger.debug(s"Publishing [${msgType.topic}/${topicPublishPrefix}/${topic}] ${body}")
       mqttManager ! Publish(

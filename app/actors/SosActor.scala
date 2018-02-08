@@ -18,32 +18,24 @@
 package actors
 
 import java.lang
-
-import play.api.Logger
-import akka.actor.{Actor, ActorRef, ActorSelection, Props, Scheduler}
-import models._
-import models.sos._
-import utils.MyLogger
-
-import scala.io.Source
-import play.api.Application
-
-import scala.concurrent.duration._
-import scala.util.{Failure, Success}
-import scala.concurrent.{Await, Future}
-import play.api.libs.ws._
-
-import scala.util.Failure
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import java.util.regex.Pattern
+import java.time.{ZoneId, ZoneOffset}
+import java.time.format.DateTimeFormatter
 
 import actors.ActorMqtt.CmdMqttPublish
-import actors.ActorSupervisor.CmdGetOrStart
+import akka.actor.{Actor, ActorSelection}
+import akka.pattern.ask
+import models._
+import models.sos._
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws._
 import play.libs.Akka
+import utils.MyLogger
 
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 import scala.util.matching.Regex
-import scala.xml._
 
 object SosActor {
   /** the internal name of the actor */
@@ -52,30 +44,41 @@ object SosActor {
 
 class SosActor extends Actor with MyLogger {
 
-  lazy val dbActorSel: ActorSelection = context.system.actorSelection(s"/user/${ActorSupervisor.ActorName}/${DbActor.ActorName}")
-  lazy val mqttActorSel: ActorSelection = context.system.actorSelection(s"/user/${ActorSupervisor.ActorName}/${ActorMqtt.ActorName}")
+  lazy val dbActorSel: ActorSelection = context.system.actorSelection(
+    s"/user/${ActorSupervisor.ActorName}/${DbActor.ActorName}")
+  lazy val mqttActorSel: ActorSelection = context.system.actorSelection(
+    s"/user/${ActorSupervisor.ActorName}/${ActorMqtt.ActorName}")
 
-  lazy val UPLINK_SOS_PUBLISH_VIA_MQTT: lang.Boolean = play.Play.application.configuration.getBoolean("sensorweb.uplink.sos.publishViaMqtt")
+  lazy val UPLINK_SOS_PUBLISH_VIA_MQTT: lang.Boolean = play.Play.application.configuration.getBoolean(
+    "sensorweb.uplink.sos.publishViaMqtt")
 
   lazy val UPLINK_SOS_URL: String = play.Play.application.configuration.getString("sensorweb.uplink.sos.url")
   lazy val UPLINK_SOS_TIMEOUT: Int = play.Play.application.configuration.getString("sensorweb.uplink.sos.timeout").toInt
 
   // nodeequivalent also used as api key to allow per station in SOS admin to recognise
-  lazy val UPLINK_SOS_NODE_EQUIVALENT: String = play.Play.application.configuration.getString("sensorweb.uplink.sos.node_equivalent")
-  lazy val UPLINK_SOS_SECURITY_TOKEN: String = play.Play.application.configuration.getString("sensorweb.uplink.sos.securitytoken")
+  lazy val UPLINK_SOS_NODE_EQUIVALENT: String = play.Play.application.configuration.getString(
+    "sensorweb.uplink.sos.node_equivalent")
+  lazy val UPLINK_SOS_SECURITY_TOKEN: String = play.Play.application.configuration.getString(
+    "sensorweb.uplink.sos.securitytoken")
 
-  lazy val VOCAB_NETWORK_IDENTIFIER: String = play.Play.application.configuration.getString("sensorweb.vocab.network.identifier")
-  lazy val VOCAB_PREFIX_PROCEDURE: String = play.Play.application.configuration.getString("sensorweb.vocab.prefix.procedure")
-  lazy val VOCAB_PREFIX_OFFERING: String = play.Play.application.configuration.getString("sensorweb.vocab.prefix.offering")
-  lazy val VOCAB_PREFIX_FEATURE: String = play.Play.application.configuration.getString("sensorweb.vocab.prefix.feature")
-  lazy val VOCAB_PREFIX_PHENOMENON: String = play.Play.application.configuration.getString("sensorweb.vocab.prefix.phenomenon")
+  lazy val VOCAB_NETWORK_IDENTIFIER: String = play.Play.application.configuration.getString(
+    "sensorweb.vocab.network.identifier")
+  lazy val VOCAB_PREFIX_PROCEDURE: String = play.Play.application.configuration.getString(
+    "sensorweb.vocab.prefix.procedure")
+  lazy val VOCAB_PREFIX_OFFERING: String = play.Play.application.configuration.getString(
+    "sensorweb.vocab.prefix.offering")
+  lazy val VOCAB_PREFIX_FEATURE: String = play.Play.application.configuration.getString(
+    "sensorweb.vocab.prefix.feature")
+  lazy val VOCAB_PREFIX_PHENOMENON: String = play.Play.application.configuration.getString(
+    "sensorweb.vocab.prefix.phenomenon")
 
   var sosDcpKvp = ""
   var sosDcpPox = ""
   var nodeEquivalentID: Long = 0
 
   // TODO sort of hardcoded
-  val WizSosPattern: Regex = """(updatewizsml)<>(http.*)<>(HIGH|LOW)""".r
+  val WizSosPattern: Regex =
+    """(updatewizsml)<>(http.*)<>(HIGH|LOW)""".r
 
   override def preStart(): Unit = {
     logger.info(s"Starting SosActor for $UPLINK_SOS_URL")
@@ -88,7 +91,8 @@ class SosActor extends Actor with MyLogger {
     logger.info("Finding SOS-UPLINK node in Database ID " + UPLINK_SOS_NODE_EQUIVALENT)
     nodeEquivalentID = SensorNode.getSensorNodeByExtendedAddress(UPLINK_SOS_NODE_EQUIVALENT).head.idsensornode
 
-    dbActorSel ! LogDataMessage("info from SosActor.preStart", s"start sos actor now with NODE_EQUIVALENT $UPLINK_SOS_NODE_EQUIVALENT = $nodeEquivalentID")
+    dbActorSel ! LogDataMessage("info from SosActor.preStart",
+      s"start sos actor now with NODE_EQUIVALENT $UPLINK_SOS_NODE_EQUIVALENT = $nodeEquivalentID")
     dbActorSel ! LogDataMessage("info from SosActor.preStart", s"start sos actor now with $sosDcpKvp with sosDcpKvp")
     dbActorSel ! LogDataMessage("info from SosActor.preStart", s"start sos actor now with $sosDcpPox with sosDcpPox")
   }
@@ -155,7 +159,9 @@ class SosActor extends Actor with MyLogger {
         case "bulkupload" => {
           logger.info("Uploading new observations...")
           // fire and forget :-p
-          val uploadFuture = scala.concurrent.Future { upload(fetchFailedObservations = false, 500) }
+          val uploadFuture = scala.concurrent.Future {
+            upload(fetchFailedObservations = false, 500)
+          }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
         }
@@ -163,7 +169,9 @@ class SosActor extends Actor with MyLogger {
         case "redeemupload" => {
           logger.info("Uploading previously failed observations...")
           // fire and forget :-p
-          val uploadFuture = scala.concurrent.Future { upload(fetchFailedObservations = true, 100) }
+          val uploadFuture = scala.concurrent.Future {
+            upload(fetchFailedObservations = true, 100)
+          }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
         }
@@ -173,7 +181,9 @@ class SosActor extends Actor with MyLogger {
 
           // fire and forget :-p
           //TODO rename newOrFailed to "fetchFailedObservations" and invert true/false
-          val uploadFuture = scala.concurrent.Future { uploadTextObservations(newOrFailed = true, 100) }
+          val uploadFuture = scala.concurrent.Future {
+            uploadTextObservations(newOrFailed = true, 100)
+          }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
         }
@@ -182,7 +192,9 @@ class SosActor extends Actor with MyLogger {
           logger.info("Uploading previously failed text observations...")
 
           // fire and forget :-p
-          val uploadFuture = scala.concurrent.Future { uploadTextObservations(newOrFailed = false, 100) }
+          val uploadFuture = scala.concurrent.Future {
+            uploadTextObservations(newOrFailed = false, 100)
+          }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
         }
@@ -204,8 +216,9 @@ class SosActor extends Actor with MyLogger {
         }
 
         // FIXME sort of hardcoded
-        case WizSosPattern(wiz,sensorURI,smlCharacteristic) => {
-          dbActorSel ! LogDataMessage("info from SosActor", s"trying update sensorml for $sensorURI to $smlCharacteristic")
+        case WizSosPattern(wiz, sensorURI, smlCharacteristic) => {
+          dbActorSel ! LogDataMessage("info from SosActor",
+            s"trying update sensorml for $sensorURI to $smlCharacteristic")
           val uploadFuture = scala.concurrent.Future {
             updateSensorMeasureModeCharacteristic(sensorURI, smlCharacteristic)
           }
@@ -226,6 +239,7 @@ class SosActor extends Actor with MyLogger {
   /**
     * upload observations either to SOS or MQTT
     * depends on config setting UPLINK_SOS_PUBLISH_VIA_MQTT
+    *
     * @param fetchFailedObservations
     * @param maxNum
     */
@@ -234,7 +248,10 @@ class SosActor extends Actor with MyLogger {
     val updateListMeas = SensorMeasurement.getSelectForSosUpload(fetchFailedObservations, maxNum)
     val obsToUpload = updateListMeas.length
 
-    logger.info(s"Fetching ${if (fetchFailedObservations) "failed" else "new"} observations (max: $maxNum). - $obsToUpload found for upload")
+    logger.info(s"Fetching ${
+      if (fetchFailedObservations) "failed"
+      else "new"
+    } observations (max: $maxNum). - $obsToUpload found for upload")
 
     val nodesList = for {
       sensorNode <- SensorNode.getAllWithParser
@@ -248,7 +265,7 @@ class SosActor extends Actor with MyLogger {
 
     val typesMap = typesList.toMap
 
-//    var returnCode = 0
+    //    var returnCode = 0
 
     for (obs <- updateListMeas) {
       // templates for string-based XML generation reside under models.sos
@@ -257,7 +274,8 @@ class SosActor extends Actor with MyLogger {
       if (UPLINK_SOS_PUBLISH_VIA_MQTT)
         publishObservationToMqtt(obs, nodesMap, typesMap)
       else {
-        logger.debug(s"we assume all procedureIDs are well-known and exist in SOS (because checked/refreshed at startup and on Node/type editing (to be implemented :-p))")
+        logger.debug(
+          s"we assume all procedureIDs are well-known and exist in SOS (because checked/refreshed at startup and on Node/type editing (to be implemented :-p))")
         publishObservationToSos(obs, nodesMap, typesMap)
       }
     }
@@ -265,12 +283,14 @@ class SosActor extends Actor with MyLogger {
 
   /**
     * publishes an observation directly to SOS
+    *
     * @param nodesMap
     * @param typesMap
     * @param obs
     * @return
     */
-  private def publishObservationToSos(obs: SensorMeasurement, nodesMap: Map[Long, SensorNode], typesMap: Map[Long, SensorType]): Unit = {
+  private def publishObservationToSos(obs: SensorMeasurement, nodesMap: Map[Long, SensorNode],
+                                      typesMap: Map[Long, SensorType]): Unit = {
     val nodeID = nodesMap.apply(obs.sensornodes_idsensornode)
     val typeID = typesMap.apply(obs.sensortypes_idsensortype)
     val phenTime = obs.meastime
@@ -299,14 +319,15 @@ class SosActor extends Actor with MyLogger {
       returnCode =>
         returnCode match {
           case 0 => {
-            dbActorSel ! LogDataMessage("info from SosActor", s"obs insert ok for obsID: ${obs.idsensormeasurement}")
+            logger.debug(s"InsertObservation returned: OK ($returnCode) for ObservationID: ${obs.idsensormeasurement}")
+            //FIXME returnCode should alwas be 0 at this point!
             val sostransmitted = if (returnCode == 0) true
                                  else false
             SensorMeasurement.updateSosState(obs.idsensormeasurement, sostransmitted, returnCode)
           }
 
           case _ => {
-            dbActorSel ! LogDataMessage("info from SosActor", "obs insert error, check if sensor exists")
+            logger.warn(s"InsertObservation returned: ERROR ($returnCode) for ObservationID: ${obs.idsensormeasurement}")
 
             val existsFuture = existsSensor(sensorURI)
 
@@ -314,7 +335,7 @@ class SosActor extends Actor with MyLogger {
               returnCode =>
                 returnCode match {
                   case 1 => {
-                    logger.warn("sensor does not exists -> inserting")
+                    logger.warn("Sensor does not exists -> inserting")
                     val placement: Array[lang.Double] = Array(nodeID.latitude, nodeID.longitude, nodeID.altitude)
                     val obsProp = urlify(typeID.phenomenon)
                     val platformName = urlify(nodeID.name)
@@ -331,7 +352,7 @@ class SosActor extends Actor with MyLogger {
                             insertObservation(myOmXml, offeringURI, obs.idsensormeasurement).map { returnCode =>
                               returnCode match {
                                 case 0 => {
-                                  dbActorSel ! LogDataMessage("info from SosActor", "finally obs insert ok")
+                                  dbActorSel ! LogDataMessage("info from SosActor", "finally observation insert ok")
                                   val sostransmitted = if (returnCode == 0) true
                                                        else false
                                   SensorMeasurement.updateSosState(obs.idsensormeasurement, sostransmitted, returnCode)
@@ -356,8 +377,10 @@ class SosActor extends Actor with MyLogger {
                         }
                     }
                   }
-                  case _ => dbActorSel ! LogDataMessage("info from SosActor",
-                    "obs insert error " + obs.idsensormeasurement)
+                  case _ =>
+                    logger.warn("Insert")
+                    dbActorSel ! LogDataMessage("info from SosActor",
+                    "observation insert error " + obs.idsensormeasurement)
                     val sostransmitted = if (returnCode == 0) true
                                          else false
                     SensorMeasurement.updateSosState(obs.idsensormeasurement, sostransmitted, returnCode)
@@ -368,11 +391,33 @@ class SosActor extends Actor with MyLogger {
     }
   }
 
-  private def publishObservationToMqtt(obs: SensorMeasurement, nodesMap: Map[Long, SensorNode], typesMap: Map[Long, SensorType]): Unit = {
-    mqttActorSel ! CmdMqttPublish(SensorwebObservations,nodesMap.apply(obs.sensornodes_idsensornode).name, "measurements", false)
+  /**
+    * Publishes a SensorObservation to MQTT. This can't guarantee that the Observation will be read by anyone!
+    * @param observation
+    * @param nodesMap
+    * @param typesMap
+    */
+  private def publishObservationToMqtt(observation: SensorMeasurement, nodesMap: Map[Long, SensorNode],
+                                       typesMap: Map[Long, SensorType]): Unit = {
+
+    val sensorNode = nodesMap.apply(observation.sensornodes_idsensornode)
+    val sensorType = typesMap.apply(observation.sensortypes_idsensortype)
+
+    val dateTimeFormatter = DateTimeFormatter.ISO_INSTANT
+
+    val measIsoTime = observation.meastime.toInstant().atZone(ZoneId.systemDefault()).withZoneSameLocal(ZoneId.of("UTC")).format(dateTimeFormatter)
+
+
+    logger.debug(s"Telling $mqttActorSel CmdMqttPublish() ObservationID: ${observation.idsensormeasurement}")
+    mqttActorSel ! CmdMqttPublish(msgType = SensorwebObservations,
+      topic = urlify(s"${sensorNode.name}/p${sensorType.sensid}_${sensorType.phenomenon}"),
+      body = s"$measIsoTime;${observation.calcvalue};${sensorType.unit}",
+      retain = false)
+
+    SensorMeasurement.updateSosState(observation.idsensormeasurement, true, 0)
   }
 
-    // here former SosConnector Stuff?
+  // here former SosConnector Stuff?
   def uploadTextObservations(newOrFailed: Boolean, maxNum: Long) = {
 
     // val updateListMeas = SensorMeasurement.getAllNewSosForUpload
@@ -381,7 +426,8 @@ class SosActor extends Actor with MyLogger {
     val obsToUpload = updateListTextObs.length
 
     // logger.debug(s"we assume all procedureIDs are well-known and exist in SOS (because checked/refreshed at startup and on Node/type editing (to be implemented :-p))")
-    dbActorSel ! LogDataMessage("info from SosActor", s"updateListTextObs where SosUpload is false - $obsToUpload open SensorMeasurements")
+    dbActorSel ! LogDataMessage("info from SosActor",
+      s"updateListTextObs where SosUpload is false - $obsToUpload open SensorMeasurements")
 
     val nodesList = for {
       sensorNode <- SensorNode.getAllWithParser
@@ -400,7 +446,8 @@ class SosActor extends Actor with MyLogger {
     for (obs <- updateListTextObs) {
 
       // templates for string-based XML generation reside under models.sos
-      dbActorSel ! LogDataMessage("info from SosActor.updateListTextObs", "obs insert for " + obs.idsensortextobservation)
+      dbActorSel ! LogDataMessage("info from SosActor.updateListTextObs",
+        "observation insert for " + obs.idsensortextobservation)
 
       val nodeID = nodesMap.apply(obs.sensornodes_idsensornode)
       val typeID = typesMap.apply(obs.sensortypes_idsensortype)
@@ -437,12 +484,13 @@ class SosActor extends Actor with MyLogger {
         returnCode =>
           returnCode match {
             case 0 => {
-              dbActorSel ! LogDataMessage("info from SosActor", "obs insert ok")
-              val sostransmitted = if (returnCode == 0) true else false
+              dbActorSel ! LogDataMessage("info from SosActor", "observation insert ok")
+              val sostransmitted = if (returnCode == 0) true
+                                   else false
               SensorTextObservation.updateSosState(obs.idsensortextobservation, sostransmitted, returnCode)
             }
             case _ => {
-              dbActorSel ! LogDataMessage("info from SosActor", "obs insert error, check if sensor exists")
+              dbActorSel ! LogDataMessage("info from SosActor", "observation insert error, check if sensor exists")
 
               val existsFuture = existsSensor(sensorURI)
 
@@ -455,21 +503,28 @@ class SosActor extends Actor with MyLogger {
                       insertObservation(myOmXml, offeringURI, obs.idsensortextobservation).map { returnCode =>
                         returnCode match {
                           case 0 => {
-                            dbActorSel ! LogDataMessage("info from SosActor", "finally obs insert ok")
-                            val sostransmitted = if (returnCode == 0) true else false
-                            SensorTextObservation.updateSosState(obs.idsensortextobservation, sostransmitted, returnCode)
+                            dbActorSel ! LogDataMessage("info from SosActor", "finally observation insert ok")
+                            val sostransmitted = if (returnCode == 0) true
+                                                 else false
+                            SensorTextObservation.updateSosState(obs.idsensortextobservation, sostransmitted,
+                              returnCode)
                           }
-                          case _ => { 
-                            dbActorSel ! LogDataMessage("info from SosActor", "obs insert error " + obs.idsensortextobservation)
-                            val sostransmitted = if (returnCode == 0) true else false
-                            SensorTextObservation.updateSosState(obs.idsensortextobservation, sostransmitted, returnCode)
+                          case _ => {
+                            dbActorSel ! LogDataMessage("info from SosActor",
+                              "observation insert error " + obs.idsensortextobservation)
+                            val sostransmitted = if (returnCode == 0) true
+                                                 else false
+                            SensorTextObservation.updateSosState(obs.idsensortextobservation, sostransmitted,
+                              returnCode)
                           }
                         }
                       }
                     }
-                    case _ => { 
-                      dbActorSel ! LogDataMessage("info from SosActor", "obs insert error " + obs.idsensortextobservation)
-                      val sostransmitted = if (returnCode == 0) true else false
+                    case _ => {
+                      dbActorSel ! LogDataMessage("info from SosActor",
+                        "observation insert error " + obs.idsensortextobservation)
+                      val sostransmitted = if (returnCode == 0) true
+                                           else false
                       SensorTextObservation.updateSosState(obs.idsensortextobservation, sostransmitted, returnCode)
                     }
                   }
@@ -480,8 +535,8 @@ class SosActor extends Actor with MyLogger {
     }
 
   }
-  def checkCapa(capaUrl: String): Future[Int] = {
 
+  def checkCapa(capaUrl: String): Future[Int] = {
     logger.debug("check capa:" + capaUrl)
 
     val holder: WSRequestHolder = WS.url(capaUrl)
@@ -495,43 +550,48 @@ class SosActor extends Actor with MyLogger {
     //.withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
     val futureResult: Future[Int] = complexHolder.get().map {
-      response =>
-        {
-          // remove me :-)
-          // logger.debug(response.body)
-          var returnCode: Int = 5
+      response => {
+        // remove me :-)
+        // logger.debug(response.body)
+        var returnCode: Int = 5
 
-          if (response.body.contains("ows:Exception")) {
-            if (response.body.contains("InvalidParameterValue")) {
-              logger.info("GetCapabilities: InvalidParameterValue")
-              dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: InvalidParameterValue")
-              returnCode = 1
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: some other ows:Exception")
-              returnCode = 5
+        if (response.body.contains("ows:Exception")) {
+          if (response.body.contains("InvalidParameterValue")) {
+            logger.info("GetCapabilities: InvalidParameterValue")
+            dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: InvalidParameterValue")
+            returnCode = 1
+          }
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: some other ows:Exception")
+            returnCode = 5
+          }
+        }
+        else {
+          if (response.body.contains("sos:Capabilities")) {
+            if (response.body.contains("ows:OperationsMetadata")) {
+              dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities ows:OperationsMetadata")
+              returnCode = 0
             }
-          } else {
-            if (response.body.contains("sos:Capabilities")) {
-              if (response.body.contains("ows:OperationsMetadata")) {
-                dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities ows:OperationsMetadata")
-                returnCode = 0
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: unexpected error")
-                returnCode = 5
-              }
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: dont't know what to write, unlikely to come along here?")
+            else {
+              dbActorSel ! LogDataMessage("info from SosActor", "GetCapabilities: unexpected error")
               returnCode = 5
             }
           }
-          returnCode
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor",
+              "GetCapabilities: dont't know what to write, unlikely to come along here?")
+            returnCode = 5
+          }
         }
+        returnCode
+      }
     }
     // trying to be unblocking as long as possible
     futureResult.recover {
       case e: Exception => {
         logger.debug("GetCapabilities: timeout / exception " + e.getMessage)
-        dbActorSel ! LogDataMessage("SosActor.checkCapabilities", "GetCapabilities: timeout / exception " + e.getMessage)
+        dbActorSel ! LogDataMessage("SosActor.checkCapabilities",
+          "GetCapabilities: timeout / exception " + e.getMessage)
         // return value!
         5
       }
@@ -539,9 +599,13 @@ class SosActor extends Actor with MyLogger {
     futureResult
   }
 
+  /**
+    * Sends "describeSensor" to SOS to check if a Sensor exists.
+    * @param sensorURI
+    * @return
+    */
   def existsSensor(sensorURI: String): Future[Int] = {
-
-    dbActorSel ! LogDataMessage("info from SosActor", "existsSensor:" + sensorURI)
+    logger.info(s"Checking if $sensorURI exists in SOS")
 
     val holder: WSRequestHolder = WS.url(sosDcpKvp)
 
@@ -552,47 +616,47 @@ class SosActor extends Actor with MyLogger {
       .withQueryString("request" -> "DescribeSensor")
       .withQueryString("procedureDescriptionFormat" -> "http://www.opengis.net/sensorML/1.0.1")
       .withQueryString("procedure" -> sensorURI)
-      //.withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
+    //.withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
+    //FIXME refactor this var returnCode mess.
     val futureResult: Future[Int] = complexHolder.get().map {
-      response =>
-        {
-          // remove me :-)
-          // logger.debug(response.body)
-          var returnCode: Int = 5
+      response => {
+        logger.trace(s"Response Body: ${response.body}")
+        var returnCode: Int = 5
 
-          if (response.body.contains("ows:Exception")) {
-            if (response.body.contains("InvalidParameterValue")) {
-              logger.warn(s"existsSensor: InvalidParameterValue - sensorID '${sensorURI}' does not exist")
-              dbActorSel ! LogDataMessage("info from SosActor", "existsSensor: InvalidParameterValue - sensorID does not exist")
-              returnCode = 1
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "existsSensor: some other ows:Exception")
-              returnCode = 5
+        if (response.body.contains("ows:Exception")) {
+          if (response.body.contains("InvalidParameterValue")) {
+            logger.warn(s"existsSensor: InvalidParameterValue - sensorID '${sensorURI}' does not exist")
+            returnCode = 1
+          }
+          else {
+            logger.warn("existsSensor: some other ows:Exception")
+            returnCode = 5
+          }
+        }
+        else {
+          if (response.body.contains("swes:DescribeSensorResponse")) {
+            if (response.body.contains(sensorURI)) {
+              logger.info(s"existsSensor: response indicates sensor $sensorURI does veryl likely exist.")
+              returnCode = 0
             }
-          } else {
-            if (response.body.contains("swes:DescribeSensorResponse")) {
-              if (response.body.contains(sensorURI)) {
-                // dbActorSel ! LogDataMessage("info from SosActor", "existsSensor: very likely to exist")
-                returnCode = 0
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "existsSensor: unexpected error, swes response does not contain sensor ID")
-                returnCode = 5
-              }
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "existsSensor: dont't know what to write, unlikely to come along here?")
+            else {
+              logger.warn("existSensor: Unexpected response. SWES response does not contain SensorID")
               returnCode = 5
             }
           }
-          returnCode
+          else {
+            logger.error("existsSensor: This path is unlikely to be executed at all. Refactor me!!!")
+            returnCode = 5
+          }
         }
+        returnCode
+      }
     }
-    // trying to be unblocking as long as possible
+
     futureResult.recover {
       case e: Exception => {
         logger.warn("existsSensor: timeout / exception " + e.getMessage)
-        dbActorSel ! LogDataMessage("SosActor.existsSensor", "existsSensor: timeout / exception " + e.getMessage)
-        // return value!
         5
       }
     }
@@ -613,23 +677,23 @@ class SosActor extends Actor with MyLogger {
       .withQueryString("request" -> "DescribeSensor")
       .withQueryString("procedureDescriptionFormat" -> "http://www.opengis.net/sensorML/1.0.1")
       .withQueryString("procedure" -> sensorURI)
-      //.withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
+    //.withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
     val futureResult: Future[String] = complexHolder.get().map {
-      response =>
-        {
-          // body.xml maybe ?!
-          response.body
-        }
+      response => {
+        // body.xml maybe ?!
+        response.body
+      }
     }
 
     // trying to be unblocking as long as possible
     futureResult.recover {
       case e: Exception => {
         logger.warn("getSensorDescription: timeout / exception " + e.getMessage)
-        dbActorSel ! LogDataMessage("SosActor.existsSensor", "getSensorDescription: timeout / exception " + e.getMessage)
+        dbActorSel ! LogDataMessage("SosActor.existsSensor",
+          "getSensorDescription: timeout / exception " + e.getMessage)
         // return value!
-        s"<err>${ e.getMessage }</err>"
+        s"<err>${e.getMessage}</err>"
       }
     }
     futureResult
@@ -649,36 +713,42 @@ class SosActor extends Actor with MyLogger {
       .withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
     val futureResult: Future[Int] = complexHolder.get().map {
-      response =>
-        {
-          // remove me :-)
-          // logger.debug(response.body)
-          var returnCode: Int = 5
-          if (response.body.contains("ows:Exception")) {
-            if (response.body.contains("InvalidParameterValue")) {
-              logger.info(s"deleteSensor: InvalidParameterValue - sensorID ${sensorURI} does not exist, but therefore is kind of deleted")
-              returnCode = 2
-            } else {
-              logger.info("deleteSensor: some other ows:Exception")
-              returnCode = 5
-            }
-          } else {
-            if (response.body.contains("swes:deletedProcedure")) {
+      response => {
+        // remove me :-)
+        // logger.debug(response.body)
+        var returnCode: Int = 5
+        if (response.body.contains("ows:Exception")) {
+          if (response.body.contains("InvalidParameterValue")) {
+            logger.info(
+              s"deleteSensor: InvalidParameterValue - sensorID ${sensorURI} does not exist, but therefore is kind of deleted")
+            returnCode = 2
+          }
+          else {
+            logger.info("deleteSensor: some other ows:Exception")
+            returnCode = 5
+          }
+        }
+        else {
+          if (response.body.contains("swes:deletedProcedure")) {
 
-              if (response.body.contains(sensorURI)) {
-                logger.info(s"deleteSensor: sensorID ${sensorURI} deleted")
-                returnCode = 0
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "deleteSensor: unexpected error, swes response does not contain sensor ID")
-                returnCode = 5
-              }
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "deleteSensor: dont't know what to write, unlikely to come along here?")
+            if (response.body.contains(sensorURI)) {
+              logger.info(s"deleteSensor: sensorID ${sensorURI} deleted")
+              returnCode = 0
+            }
+            else {
+              dbActorSel ! LogDataMessage("info from SosActor",
+                "deleteSensor: unexpected error, swes response does not contain sensor ID")
               returnCode = 5
             }
           }
-          returnCode
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor",
+              "deleteSensor: dont't know what to write, unlikely to come along here?")
+            returnCode = 5
+          }
         }
+        returnCode
+      }
     }
     // trying to be unblocking as long as possible
     futureResult.recover {
@@ -692,8 +762,9 @@ class SosActor extends Actor with MyLogger {
     futureResult
   }
 
-  def insertSensor(sensorType: SOSConstants.EntityType, uniqueSensorID: String, mySml: SensorDescription, sensorURI: String,
-    phenomenonURI: String, obsType: String): Future[Int] = {
+  def insertSensor(sensorType: SOSConstants.EntityType, uniqueSensorID: String, mySml: SensorDescription,
+                   sensorURI: String,
+                   phenomenonURI: String, obsType: String): Future[Int] = {
 
     dbActorSel ! LogDataMessage("info from SosActor", "insertSensor:" + sensorURI)
     val obsTypeUri = getObsTypeURI(obsType)
@@ -704,16 +775,18 @@ class SosActor extends Actor with MyLogger {
     val sensorML = mySml.getSensorML()
 
     // BEWARE horrible readability :-) full of string interpolation
-    val insertXML: String = s"""$sosInsertXmlHeader
-$sensorML
-</swes:procedureDescription>
-<swes:observableProperty>$phenomenonURI</swes:observableProperty>
-<swes:metadata><sos:SosInsertionMetadata>
-<sos:observationType>$obsTypeUri</sos:observationType>
-<sos:featureOfInterestType>$samplingDefUri</sos:featureOfInterestType>
-</sos:SosInsertionMetadata>
-</swes:metadata>
-</swes:InsertSensor>\n"""
+    val insertXML: String =
+      s"""$sosInsertXmlHeader
+          |$sensorML
+          |</swes:procedureDescription>
+          |<swes:observableProperty>$phenomenonURI</swes:observableProperty>
+          |<swes:metadata><sos:SosInsertionMetadata>
+          |<sos:observationType>$obsTypeUri</sos:observationType>
+          |<sos:featureOfInterestType>$samplingDefUri</sos:featureOfInterestType>
+          |</sos:SosInsertionMetadata>
+          |</swes:metadata>
+          |</swes:InsertSensor>
+          |""".stripMargin
 
     // logger.debug(insertXML)
 
@@ -725,37 +798,42 @@ $sensorML
       .withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
     val futureResult: Future[Int] = complexHolder.post(insertXML).map {
-      response =>
-        {
-          // remove me :-)
-          // logger.debug(response.body)
-          var returnCode: Int = 5
-          if (response.body.contains("ows:Exception")) {
+      response => {
+        // remove me :-)
+        // logger.debug(response.body)
+        var returnCode: Int = 5
+        if (response.body.contains("ows:Exception")) {
 
-            if (response.body.contains("InvalidParameterValue")) {
-              dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: InvalidParameterValue " + sensorURI)
-              returnCode = 2
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: some other ows:Exception " + sensorURI)
-              returnCode = 5
+          if (response.body.contains("InvalidParameterValue")) {
+            dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: InvalidParameterValue " + sensorURI)
+            returnCode = 2
+          }
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: some other ows:Exception " + sensorURI)
+            returnCode = 5
+          }
+        }
+        else {
+          if (response.body.contains("swes:InsertSensorResponse")) {
+
+            if (response.body.contains(uniqueSensorID)) {
+              dbActorSel ! LogDataMessage("info from SosActor", s"insertSensor: sensorID $uniqueSensorID inserted")
+              returnCode = 0
             }
-          } else {
-            if (response.body.contains("swes:InsertSensorResponse")) {
-
-              if (response.body.contains(uniqueSensorID)) {
-                dbActorSel ! LogDataMessage("info from SosActor", s"insertSensor: sensorID $uniqueSensorID inserted")
-                returnCode = 0
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: unexpected error, swes response does not contain sensor ID " + sensorURI)
-                returnCode = 5
-              }
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: dont't know what to write, unlikely to come along here?")
+            else {
+              dbActorSel ! LogDataMessage("info from SosActor",
+                "insertSensor: unexpected error, swes response does not contain sensor ID " + sensorURI)
               returnCode = 5
             }
           }
-          returnCode
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor",
+              "insertSensor: dont't know what to write, unlikely to come along here?")
+            returnCode = 5
+          }
         }
+        returnCode
+      }
     }
     // trying to be unblocking as long as possible
     futureResult.recover {
@@ -769,8 +847,9 @@ $sensorML
     futureResult
   }
 
-  def updateSensor(sensorType: SOSConstants.EntityType, uniqueSensorID: String, mySml: SensorDescription, sensorURI: String,
-    phenomenonURI: String, obsType: String): Future[Int] = {
+  def updateSensor(sensorType: SOSConstants.EntityType, uniqueSensorID: String, mySml: SensorDescription,
+                   sensorURI: String,
+                   phenomenonURI: String, obsType: String): Future[Int] = {
 
     logger.debug("updateSensor:" + sensorURI)
     val obsTypeUri = getObsTypeURI(obsType)
@@ -781,7 +860,8 @@ $sensorML
     val sensorML = mySml.getSensorML()
 
     // BEWARE horrible readability :-) full of string interpolation
-    val insertXML: String = s"""$sosUpdateXmlHeader
+    val insertXML: String =
+      s"""$sosUpdateXmlHeader
 <swes:procedure>$sensorURI</swes:procedure>
 <swes:procedureDescriptionFormat>http://www.opengis.net/sensorML/1.0.1</swes:procedureDescriptionFormat>
 <swes:description>
@@ -801,37 +881,42 @@ $sensorML
       .withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
     val futureResult: Future[Int] = complexHolder.post(insertXML).map {
-      response =>
-        {
-          // remove me :-)
-          // logger.debug(response.body)
-          var returnCode: Int = 5
-          if (response.body.contains("ows:Exception")) {
+      response => {
+        // remove me :-)
+        // logger.debug(response.body)
+        var returnCode: Int = 5
+        if (response.body.contains("ows:Exception")) {
 
-            if (response.body.contains("InvalidParameterValue")) {
-              dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: InvalidParameterValue")
-              returnCode = 2
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: some other ows:Exception")
-              returnCode = 5
+          if (response.body.contains("InvalidParameterValue")) {
+            dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: InvalidParameterValue")
+            returnCode = 2
+          }
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: some other ows:Exception")
+            returnCode = 5
+          }
+        }
+        else {
+          if (response.body.contains("swes:InsertSensorResponse")) {
+
+            if (response.body.contains(uniqueSensorID)) {
+              dbActorSel ! LogDataMessage("info from SosActor", s"insertSensor: sensorID $uniqueSensorID inserted")
+              returnCode = 0
             }
-          } else {
-            if (response.body.contains("swes:InsertSensorResponse")) {
-
-              if (response.body.contains(uniqueSensorID)) {
-                dbActorSel ! LogDataMessage("info from SosActor", s"insertSensor: sensorID $uniqueSensorID inserted")
-                returnCode = 0
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: unexpected error, swes response does not contain sensor ID")
-                returnCode = 5
-              }
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "insertSensor: dont't know what to write, unlikely to come along here?")
+            else {
+              dbActorSel ! LogDataMessage("info from SosActor",
+                "insertSensor: unexpected error, swes response does not contain sensor ID")
               returnCode = 5
             }
           }
-          returnCode
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor",
+              "insertSensor: dont't know what to write, unlikely to come along here?")
+            returnCode = 5
+          }
         }
+        returnCode
+      }
     }
     // trying to be unblocking as long as possible
     futureResult.recover {
@@ -845,23 +930,26 @@ $sensorML
     futureResult
   }
 
-  def updateSensorMeasureModeCharacteristic(sensorURI: String, smlCharacteristic : String): Unit = {
+  def updateSensorMeasureModeCharacteristic(sensorURI: String, smlCharacteristic: String): Unit = {
 
     logger.debug("updateSensor:" + sensorURI)
 
     val mySml = getSensorDescription(sensorURI).map { smltext =>
       val sml: String = if (smltext.contains(sensorURI) && smltext.contains("LOW") && (!smltext.contains("<err>"))) {
         smltext.replace("LOW", "HIGH")
-      } else if (smltext.contains(sensorURI) && smltext.contains("HIGH") && (!smltext.contains("<err>"))) {
-        smltext.replace("HIGH", "LOW")
-      } else {
-        "ERROR"
       }
+                        else if (smltext.contains(sensorURI) && smltext.contains("HIGH") && (!smltext.contains(
+        "<err>"))) {
+        smltext.replace("HIGH", "LOW")
+      }
+                        else {
+                          "ERROR"
+                        }
       sml
     }
 
     mySml.onSuccess {
-      case sensorML :String => {
+      case sensorML: String => {
 
         if (sensorML.equalsIgnoreCase("ERROR")) {
           throw new java.io.IOException(s"cant read sensorml")
@@ -870,7 +958,8 @@ $sensorML
         val sosUpdateXmlHeader = SOSConstants.UpdateSensorHeaders
 
         // BEWARE horrible readability :-) full of string interpolation
-        val insertXML: String = s"""$sosUpdateXmlHeader
+        val insertXML: String =
+          s"""$sosUpdateXmlHeader
   <swes:procedure>$sensorURI</swes:procedure>
   <swes:procedureDescriptionFormat>http://www.opengis.net/sensorML/1.0.1</swes:procedureDescriptionFormat>
   <swes:description>
@@ -890,30 +979,38 @@ $sensorML
           .withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
         val futureResult: Future[Int] = complexHolder.post(insertXML).map {
-          response =>
-          {
+          response => {
             var returnCode: Int = 5
             if (response.body.contains("ows:Exception")) {
 
               if (response.body.contains("InvalidParameterValue")) {
-                dbActorSel ! LogDataMessage("info from SosActor", "updateSensorMeasureModeCharacteristic: InvalidParameterValue")
+                dbActorSel ! LogDataMessage("info from SosActor",
+                  "updateSensorMeasureModeCharacteristic: InvalidParameterValue")
                 returnCode = 2
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "updateSensorMeasureModeCharacteristic: some other ows:Exception")
+              }
+              else {
+                dbActorSel ! LogDataMessage("info from SosActor",
+                  "updateSensorMeasureModeCharacteristic: some other ows:Exception")
                 returnCode = 5
               }
-            } else {
+            }
+            else {
               if (response.body.contains("swes:UpdateSensorResponse")) {
 
                 if (response.body.contains(sensorURI)) {
-                  dbActorSel ! LogDataMessage("info from SosActor", s"updateSensorMeasureModeCharacteristic: sensorID $sensorURI updated")
+                  dbActorSel ! LogDataMessage("info from SosActor",
+                    s"updateSensorMeasureModeCharacteristic: sensorID $sensorURI updated")
                   returnCode = 0
-                } else {
-                  dbActorSel ! LogDataMessage("info from SosActor", "updateSensorMeasureModeCharacteristic: unexpected error, swes response does not contain sensor ID")
+                }
+                else {
+                  dbActorSel ! LogDataMessage("info from SosActor",
+                    "updateSensorMeasureModeCharacteristic: unexpected error, swes response does not contain sensor ID")
                   returnCode = 5
                 }
-              } else {
-                dbActorSel ! LogDataMessage("info from SosActor", "updateSensorMeasureModeCharacteristic: dont't know what to write, unlikely to come along here?")
+              }
+              else {
+                dbActorSel ! LogDataMessage("info from SosActor",
+                  "updateSensorMeasureModeCharacteristic: dont't know what to write, unlikely to come along here?")
                 returnCode = 5
               }
             }
@@ -924,14 +1021,15 @@ $sensorML
         futureResult.recover {
           case e: Exception => {
             logger.debug("updateSensorMeasureModeCharacteristic: timeout / exception " + e.getMessage)
-            dbActorSel ! LogDataMessage("SosActor.updateSensor", "updateSensorMeasureModeCharacteristic: timeout / exception " + e.getMessage)
+            dbActorSel ! LogDataMessage("SosActor.updateSensor",
+              "updateSensorMeasureModeCharacteristic: timeout / exception " + e.getMessage)
             // return value!
             5
           }
         }
 
       }
-      case _ =>   logger.error("updateSensorMeasureModeCharacteristic: wrong update message format received")
+      case _ => logger.error("updateSensorMeasureModeCharacteristic: wrong update message format received")
 
     }
   }
@@ -947,7 +1045,8 @@ $sensorML
     val sosOMInsertXmlHeader = SOSConstants.InsertObservationHeaders
 
     // BEWARE horrible readability :-) full of string interpolation
-    val insertXML: String = s"""$sosOMInsertXmlHeader
+    val insertXML: String =
+      s"""$sosOMInsertXmlHeader
 $omXml
 </sos:InsertObservation>"""
 
@@ -959,38 +1058,42 @@ $omXml
       .withHeaders("Authorization" -> UPLINK_SOS_SECURITY_TOKEN)
 
     val futureResult: Future[Int] = complexHolder.post(insertXML).map {
-      response =>
-        {
-          // remove me :-)
-          // logger.debug(response.body)
-          var returnCode: Int = 5
-          if (response.body.contains("ows:Exception")) {
-            if (response.body.contains("InvalidParameterValue")) {
-              dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: InvalidParameterValue")
+      response => {
+        // remove me :-)
+        // logger.debug(response.body)
+        var returnCode: Int = 5
+        if (response.body.contains("ows:Exception")) {
+          if (response.body.contains("InvalidParameterValue")) {
+            dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: InvalidParameterValue")
 
-              returnCode = 2
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: some other ows:Exception")
-              returnCode = 5
-            }
-          } else {
-            if (response.body.contains("sos:InsertObservationResponse")) {
-              dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: inserted")
-              returnCode = 0
-            } else {
-              dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: dont't know what to write, unlikely to come along here?")
-              returnCode = 5
-            }
+            returnCode = 2
           }
-          // TODO here could the DB update happen -> needs to be done in higher
-          returnCode
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: some other ows:Exception")
+            returnCode = 5
+          }
         }
+        else {
+          if (response.body.contains("sos:InsertObservationResponse")) {
+            dbActorSel ! LogDataMessage("info from SosActor", "InsertObservation: inserted")
+            returnCode = 0
+          }
+          else {
+            dbActorSel ! LogDataMessage("info from SosActor",
+              "InsertObservation: dont't know what to write, unlikely to come along here?")
+            returnCode = 5
+          }
+        }
+        // TODO here could the DB update happen -> needs to be done in higher
+        returnCode
+      }
     }
     // trying to be unblocking as long as possible
     futureResult.recover {
       case e: Exception => {
         logger.debug("insertObservation: timeout / exception " + e.getMessage)
-        dbActorSel ! LogDataMessage("SosActor.insertObservation", "insertObservation: timeout / exception " + e.getMessage)
+        dbActorSel ! LogDataMessage("SosActor.insertObservation",
+          "insertObservation: timeout / exception " + e.getMessage)
         // return value
         5
       }
@@ -1009,15 +1112,16 @@ $omXml
     }
   }
 
-  def urlify(term: String): String = {
-    logger.debug(term)
-    val resluttext = term.toLowerCase().replaceAll("\\ ", "_").replaceAll("\\+", "-").replaceAll("\\(", ".").replaceAll("\\)", ".")
-    logger.debug(resluttext)
-    resluttext
+  private def urlify(term: String): String = {
+    logger.debug(s"Urlify: $term")
+    val resulttext = term.toLowerCase().replaceAll("\\ ", "_").replaceAll("\\+", "-").replaceAll("\\(", ".").replaceAll(
+      "\\)", ".")
+    logger.debug(s"result: $resulttext")
+    resulttext
   }
 
   def insertNetworkSensor(networkID: String, obsProp: String,
-    uomCode: String, obsType: String, codeSpace: String): Future[Int] = {
+                          uomCode: String, obsType: String, codeSpace: String): Future[Int] = {
 
     //    import play.api.libs.concurrent.Execution.Implicits._
     //    import play.api.Play.current
@@ -1035,7 +1139,8 @@ $omXml
   }
 
   def insertPlatformSensor(platformID: String, networkID: String, obsProp: String,
-    uomCode: String, position: Array[java.lang.Double], obsType: String, codeSpace: String): Future[Int] = {
+                           uomCode: String, position: Array[java.lang.Double], obsType: String,
+                           codeSpace: String): Future[Int] = {
 
     val mySml: SensorDescription = new SensorDescription(platformID, networkID, obsProp,
       uomCode, position, obsType, codeSpace)
@@ -1050,7 +1155,8 @@ $omXml
   }
 
   def insertChildSensor(childSensorID: String, platformID: String, networkID: String, obsProp: String,
-    uomCode: String, placement: Array[java.lang.Double], obsType: String, codeSpace: String): Future[Int] = {
+                        uomCode: String, placement: Array[java.lang.Double], obsType: String,
+                        codeSpace: String): Future[Int] = {
 
     val mySml: SensorDescription = new SensorDescription(childSensorID, platformID, networkID, obsProp,
       uomCode, placement, obsType, codeSpace)
@@ -1066,7 +1172,7 @@ $omXml
 
   def sosSystemSetup() = {
 
-    dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup", "preparing sosSystemSetup")
+    logger.info("preparing SOS System Setup. Inserting Sensors into SOS if they do not exist.")
 
     // log system status sensortype is defined 50 in SQL
     val typeID = SensorType.getSensorTypeByID(50)
@@ -1089,25 +1195,30 @@ $omXml
             0
           }
           case 1 => {
-            dbActorSel ! LogDataMessage("SosActor.sosSystemSetup.networkExistsFuture", "network does not exists, ok, we gonna insert")
+            dbActorSel ! LogDataMessage("SosActor.sosSystemSetup.networkExistsFuture",
+              "network does not exists, ok, we gonna insert")
 
-            val insertNetworkFuture = insertNetworkSensor(VOCAB_NETWORK_IDENTIFIER, obsProp, uomCode, obsType, codeSpace)
+            val insertNetworkFuture = insertNetworkSensor(VOCAB_NETWORK_IDENTIFIER, obsProp, uomCode, obsType,
+              codeSpace)
 
             insertNetworkFuture.map {
               returnCode =>
                 returnCode match {
                   case 0 => {
-                    dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup.insertNetworkFuture", "network inserted ok, continue")
+                    dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup.insertNetworkFuture",
+                      "network inserted ok, continue")
                     0
                   }
                   case _ =>
-                    dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup.insertNetworkFuture", "cannot insert netowrk, other exception bad we can't continue really, abort")
+                    dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup.insertNetworkFuture",
+                      "cannot insert netowrk, other exception bad we can't continue really, abort")
                     5
                 }
             }
           }
           case _ => {
-            dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup.networkExistsFuture", "network does not exists or other exception bad we can't continue really, abort")
+            dbActorSel ! LogDataMessage("info from SosActor.sosSystemSetup.networkExistsFuture",
+              "network does not exists or other exception bad we can't continue really, abort")
             5
           }
         }
@@ -1117,60 +1228,71 @@ $omXml
 
       case Success(returnCode) => {
 
-        dbActorSel ! LogDataMessage("info from SosActor.networkExistsFuture.onComplete", "trying case Success SensorNode.getAllWithParser")
+        dbActorSel ! LogDataMessage("info from SosActor.networkExistsFuture.onComplete",
+          "trying case Success SensorNode.getAllWithParser")
 
         val nodes = SensorNode.getAllWithParser
 
         nodes.map {
-          sensorNode =>
-            {
-              if (sensorNode.idsensornode != nodeEquivalentID) {
+          sensorNode => {
+            if (sensorNode.idsensornode != nodeEquivalentID) {
 
-                val platformName = urlify(sensorNode.name)
-                val platformURI = VOCAB_PREFIX_PROCEDURE + "/" + VOCAB_NETWORK_IDENTIFIER + "/" + platformName
+              val platformName = urlify(sensorNode.name)
+              val platformURI = VOCAB_PREFIX_PROCEDURE + "/" + VOCAB_NETWORK_IDENTIFIER + "/" + platformName
 
-                dbActorSel ! LogDataMessage("info from SosActor.networkExistsFuture.onComplete", "testing platform " + platformURI)
+              dbActorSel ! LogDataMessage("info from SosActor.networkExistsFuture.onComplete",
+                "testing platform " + platformURI)
 
-                val platformExistsFuture = existsSensor(platformURI)
+              val platformExistsFuture = existsSensor(platformURI)
 
-                platformExistsFuture.map {
-                  returnCode =>
-                    returnCode match {
-                      case 0 => {
-                        dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map", platformURI + " - platform exists, ok: " + returnCode)
-                      }
-                      case 1 => {
-                        dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map", platformURI + " - platform does not exists, ok, we gonna insert: " + returnCode)
+              platformExistsFuture.map {
+                returnCode =>
+                  returnCode match {
+                    case 0 => {
+                      dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map",
+                        platformURI + " - platform exists, ok: " + returnCode)
+                    }
+                    case 1 => {
+                      dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map",
+                        platformURI + " - platform does not exists, ok, we gonna insert: " + returnCode)
 
-                        val position: Array[java.lang.Double] = Array(sensorNode.latitude, sensorNode.longitude, sensorNode.altitude)
-                        val insertPlatformFuture = insertPlatformSensor(platformName, VOCAB_NETWORK_IDENTIFIER, obsProp, uomCode, position, obsType, codeSpace)
+                      val position: Array[java.lang.Double] = Array(sensorNode.latitude, sensorNode.longitude,
+                        sensorNode.altitude)
+                      val insertPlatformFuture = insertPlatformSensor(platformName, VOCAB_NETWORK_IDENTIFIER, obsProp,
+                        uomCode, position, obsType, codeSpace)
 
-                        insertPlatformFuture.map {
-                          returnCode =>
-                            returnCode match {
-                              case 0 => {
-                                dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map.insertPlatformFuture.map", platformURI + "platform inserted ok, continue: " + returnCode)
+                      insertPlatformFuture.map {
+                        returnCode =>
+                          returnCode match {
+                            case 0 => {
+                              dbActorSel ! LogDataMessage(
+                                "info from SosActor.platformExistsFuture.map.insertPlatformFuture.map",
+                                platformURI + "platform inserted ok, continue: " + returnCode)
 
-                              }
-                              case _ => {
-                                dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map.insertPlatformFuture.map", platformURI + "cannot insert platform, other exception, this one won't be usable: " + returnCode + " " + sensorNode.name + " " + sensorNode.extendedaddress)
-
-                              }
                             }
-                        }
-                      }
-                      case _ => {
-                        dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map.", platformURI + " - platform does not exists or other exception bad we can't continue really, abort: " + returnCode)
+                            case _ => {
+                              dbActorSel ! LogDataMessage(
+                                "info from SosActor.platformExistsFuture.map.insertPlatformFuture.map",
+                                platformURI + "cannot insert platform, other exception, this one won't be usable: " + returnCode + " " + sensorNode.name + " " + sensorNode.extendedaddress)
 
+                            }
+                          }
                       }
                     }
-                }
+                    case _ => {
+                      dbActorSel ! LogDataMessage("info from SosActor.platformExistsFuture.map.",
+                        platformURI + " - platform does not exists or other exception bad we can't continue really, abort: " + returnCode)
+
+                    }
+                  }
               }
             }
+          }
         }
       }
       case Failure(ex) => {
-        dbActorSel ! LogDataMessage("info from SosActor.networkExistsFuture.onComplete", "sos system setup failed, couldn't initialise network sensorml " + ex.getMessage())
+        dbActorSel ! LogDataMessage("info from SosActor.networkExistsFuture.onComplete",
+          "sos system setup failed, couldn't initialise network sensorml " + ex.getMessage())
 
       }
     }
