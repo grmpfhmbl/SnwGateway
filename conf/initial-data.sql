@@ -31,7 +31,7 @@ INSERT INTO SENSORNODES VALUES(12, '0013A20040BA23C7', 'Hydro09'      , 'Customb
 
 --LAB & test
 -- INSERT INTO SENSORNODES VALUES( 1, '0013A20040BA23BE', 'LabGateway'   , 'Gateway Lab Station'                        ,         0,         0,          0);
-INSERT INTO SENSORNODES VALUES(14, '0013A20040616484', 'HydroLab01'   , 'Customboard (Hydroboard) at Lab-Station 01' ,         0,         0,          0);
+INSERT INTO SENSORNODES VALUES(14, '0013A20040616484', 'HydroLab01'   , 'Customboard (Hydroboard) at Lab-Station 01' , 47.823377, 13.039382, 417.000000);
 -- INSERT INTO SENSORNODES VALUES(15, '0012100000000002', 'WIZTest01'    , 'Water Insitu Analyzer - Mock and Testing'   ,         0,         0,          0);
 
 --GK See

@@ -34,7 +34,7 @@ echo "Creating $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 
 echo "Copying files to $INSTALL_DIR..."
-cp -Rv "../../" "$INSTALL_DIR"
+cp -R "../../" "$INSTALL_DIR"
 
 echo "Creating service unit $SERVICE_UNIT..."
 envsubst '$INSTALL_DIR $USER $PIDFILE' < snw_gateway.service.template > "$SERVICE_UNIT"

@@ -9,7 +9,9 @@ if [ -z ${H2_URL+x} ]; then
     echo "Example: H2_URL=\"jdbc:h2:tcp://localhost:9092/gateway2db/gateway2db\""
     exit 1
 else
-    echo "Will backup from $H2_URL"
+    ESCAPE_URL=$(echo $H2_URL | sed "s/^.*h2://g" | sed "s/[^[:alpha:][:digit:].-]/-/g")
+    BACKUP_FILE="$BACKUP_DIR/backup-$ESCAPE_URL-$TIME.zip"
+    echo "Will backup from $H2_URL to $BACKUP_FILE"
 fi
 
 if [ -z ${H2_USER+x} ]; then
@@ -29,4 +31,4 @@ fi
 read -p "Press any key to continue... CTRL-C to cancel." -n1 -s
 echo ""
 
-/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.Script -url "$H2_URL" $USER $PWD -script "backup-$TIME.zip" -options compression zip
+/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.Script -url "$H2_URL" $USER $PWD -script "$BACKUP_FILE" -options compression zip
