@@ -17,6 +17,7 @@
 
 package utils;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -60,33 +61,29 @@ public class WaspProcess implements Runnable {
     // return instance;
     // }
 
-    public void setUsedSerialPort(String usedSerialPort) {
+    private void setUsedSerialPort(String usedSerialPort) {
         this.usedSerialPort = usedSerialPort;
     }
 
-    public void init() throws XBeeException {
-        // sensdb.open();
+    private void init() throws XBeeException {
         waspcom = new WaspComm();
         waspcom.open(this.usedSerialPort);
         dbActor = Akka.system().actorSelection("/user/" + ActorSupervisor.ActorName() +"/" + DbActor.ActorName());
     }
 
-    public void uninit() {
+    private void uninit() {
         waspcom.close();
     }
 
-    public void Process() throws Exception {
-        DataFrame df = null;
-
-        try {
-            // read Frame
-            df = waspcom.read(10000);
-        } catch (Exception ex) {
-            logger.error(WaspProcess.class.getName() + " thrown then reading data from XBEE: " + ex.getMessage(), ex);
-        }
-
+    /**
+     * process received dataframe
+     *
+     * @param df DataFrame to be procesed.
+     * @throws XBeeException
+     */
+    private void process(DataFrame df) throws XBeeException {
         if (df == null) {
-            logger.debug("No data frame received"); // No data frame received
+            logger.debug("No data frame received");
         } else {
             if (df instanceof SensorDataFrame) {
                 logger.info("SensorDataFrame received");
@@ -240,24 +237,33 @@ public class WaspProcess implements Runnable {
     @Override
     public void run() {
         logger.debug("WaspProcess Thread started");
+        //FIXME open WaspComm with resources to save finally.
+        //FIXME this has to go to the actor itself. No thread needed, just have a readFromXbee message and schedule this every x seconds.
         try {
             this.init();
             while (true) // --- Main infinite loop ---
             {
-                Process();
+                try {
+                    DataFrame df = waspcom.read(10);
+                    process(df);
+                    Thread.sleep(10000);
+                } catch (DataFrameParseException|XBeeException ex) {
+                    logger.error("Error while reading / processing XBee data: " + ex.getMessage(), ex);
+                } catch (InterruptedException e) {
+                    logger.warn("Thread sleep was interrupted.", e);
+                } catch (Exception e) {
+                    logger.error("(in while true) THIS SHOULD NEVER HAPPEN! MAKE NEW CATCH FOR THIS!!!", e);
+                }
             }
         } catch (XBeeException ex) {
-            ex.printStackTrace();
-            // logger.error(WaspProcess.class.getName() + ": " + ex);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            // logger.error(WaspProcess.class.getName() + ": " + ex);
+            logger.error("Exception while running Thread.");
+        }
+        catch (Exception e) {
+            logger.error("(in run())THIS SHOULD NEVER HAPPEN! MAKE NEW CATCH FOR THIS!!!", e);
         } finally {
             if (this.waspcom != null) {
                 this.uninit();
             }
         }
-
     }
-
 }

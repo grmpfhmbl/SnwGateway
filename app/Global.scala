@@ -60,17 +60,17 @@ object Global extends GlobalSettings with MyLogger {
 
     //TODO SREI think of better startup sequence / waiting time
     if (subConfig.getBoolean("xbee.gateway.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(10.seconds, actorSupervisor,CmdGetOrStart(XBeeActor.ActorName))
+      Akka.system().scheduler.scheduleOnce(5.seconds, actorSupervisor,CmdGetOrStart(XBeeActor.ActorName))
     }
     if (subConfig.getBoolean("uplink.mqtt.enabled").getOrElse(false)) {
       Akka.system().scheduler.scheduleOnce(30.seconds, actorSupervisor,CmdGetOrStart(ActorMqtt.ActorName))
 
     if (subConfig.getBoolean("uplink.sos.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(60.seconds, actorSupervisor,CmdGetOrStart(SosActor.ActorName))
+      Akka.system().scheduler.scheduleOnce(90.seconds, actorSupervisor,CmdGetOrStart(SosActor.ActorName))
     }
 
     if (subConfig.getBoolean("wiz.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(90.seconds, actorSupervisor,CmdGetOrStart(WizActor.ActorName))
+      Akka.system().scheduler.scheduleOnce(120.seconds, actorSupervisor,CmdGetOrStart(WizActor.ActorName))
     }
 
     }

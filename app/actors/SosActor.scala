@@ -403,7 +403,7 @@ class SosActor extends Actor with MyLogger {
     val sensorNode = nodesMap.apply(observation.sensornodes_idsensornode)
     val sensorType = typesMap.apply(observation.sensortypes_idsensortype)
 
-    val dateTimeFormatter = DateTimeFormatter.ISO_INSTANT
+    val dateTimeFormatter = DateTimeFormatter.ISO_DATE_TIME
 
     val measIsoTime = observation.meastime.toInstant().atZone(ZoneId.systemDefault()).withZoneSameLocal(ZoneId.of("UTC")).format(dateTimeFormatter)
 

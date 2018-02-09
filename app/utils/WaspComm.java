@@ -45,7 +45,7 @@ import akka.actor.ActorSelection;
 import com.rapplogic.xbee.api.zigbee.ZNetRxResponse;
 import com.rapplogic.xbee.api.zigbee.ZNetTxRequest;
 
-public class WaspComm {
+public class WaspComm implements AutoCloseable {
 
     XBee xb = null;
     ActorSelection dbActor = null;
@@ -96,7 +96,7 @@ public class WaspComm {
         xb.sendAsynchronous(txRequest);
     }
 
-    public DataFrame read(int timeout) throws DataFrameParseException, SQLException, ClassNotFoundException {
+    public DataFrame read(int timeout) throws DataFrameParseException {
         XBeeResponse resp;
         DataFrame dataFrame = null;
         try {
@@ -126,22 +126,18 @@ public class WaspComm {
             else {
                 logger.warn("Unknown response type: " + resp.getApiId());
             }
-
             return dataFrame;
         } catch (XBeeTimeoutException ex) {
             logger.debug("XBeeTimeoutException", ex);
             return null;
         } catch (XBeeException ex) {
             logger.error("XBeeException: " + ex.getMessage(), ex);
-            LogDataMessage logMessage = new LogDataMessage("XBeeException",
-                    WaspComm.class.getName() + " XBeeException" + ex);
-            dbActor.tell(logMessage, null);
             return null;
         }
     }
 
     private void saveRSSIToDatabase(String extendedAddress, Timestamp ts)
-            throws XBeeException, ClassNotFoundException, SQLException {
+            throws XBeeException {
         AtCommand at = new AtCommand("DB");
         this.xb.sendAsynchronous(at);
         XBeeResponse atResponse = this.xb.getResponse();

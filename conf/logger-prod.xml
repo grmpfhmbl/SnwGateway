@@ -37,7 +37,7 @@
     <!--<logger name="application.actors.SosActor" level="INFO"/>-->
     <!--<logger name="application.actors.WizActor" level="INFO"/>-->
     <!--<logger name="application.actors.XBeeActor" level="INFO"/>-->
-    <logger name="application.actors.ActorMqtt" level="DEBUG"/>
+    <!--<logger name="application.actors.ActorMqtt" level="DEBUG"/>-->
     <!--<logger name="application.actors.ActorSupervisor" level="INFO"/>-->
 
     <logger name="application.models" level="WARN"/>

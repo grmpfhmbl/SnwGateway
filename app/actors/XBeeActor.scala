@@ -44,8 +44,6 @@ class XBeeActor(config: Configuration) extends Actor with MyLogger {
 
   //TODO SREI the name has technically to be injected via props, or we just assume, that out parent is always the supervisor?
   lazy val actorSupervisor = context.system.actorSelection("/user/" + ActorSupervisor.ActorName)
-  //TODO SREI get rid of this actor in here, because it's only for logging purposes
-  lazy val dbActorSel = context.system.actorSelection(s"/user/${ActorSupervisor.ActorName}/${DbActor.ActorName}")
 /*
   //TODO SREI I'm unsure if I like this. It feels wrong, but it works for now. At least the asInstanceOf sucks :-)
   lazy val dbActorSel: ActorRef = {
@@ -75,7 +73,6 @@ class XBeeActor(config: Configuration) extends Actor with MyLogger {
 
   override def preStart(): Unit = {
     logger.debug(s"XBeeActor is now getting ready... initialising waspi thread with $Comport")
-    dbActorSel ! LogDataMessage("INFO from XBeeActor", s"XBeeActor is now getting ready... initialising waspi thread with $Comport")
     startWaspProcess()
   }
 
@@ -83,65 +80,50 @@ class XBeeActor(config: Configuration) extends Actor with MyLogger {
     // TEST for general comms
     case message: String => {
       logger.debug(s"XBeeActor got message: $message")
-      dbActorSel ! LogDataMessage("INFO from XBeeActor", s"XBeeActor got unknown message: $message")
     }
     case XBeeActorCommand(fieldid, value) => {
       value match {
         case "startthread" => {
           logger.debug("message wants new thread start")
-          dbActorSel ! LogDataMessage("INFO from XBeeActor", "message wants new thread start")
           if (waspi == null && t == null) {
             logger.debug("waspi and thread are null, trying normal start")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi and thread are null, trying normal start")
             startWaspProcess()
           } else if (t != null || waspi != null) {
             logger.debug("there was some previous initialisation, trying full restart")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "there was some previous initialisation, trying full restart")
             stopWaspProcess()
             startWaspProcess()
           }
         }
         case "checkthread" => {
           logger.debug("message wants to check thread start")
-          dbActorSel ! LogDataMessage("INFO from XBeeActor", "message wants to check thread start")
           if (t == null) {
             logger.debug("waspi thread is null")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi thread is null")
           } else if (t.isAlive()) {
             logger.debug("waspi thread seems alive")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi thread seems alive")
           } else {
             logger.debug("waspi thread seems dead or unknown but not null")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi thread seems dead or unknown but not null")
           }
         }
         case "endthread" => {
           logger.debug("message wants to check thread start")
-          dbActorSel ! LogDataMessage("INFO from XBeeActor", "message wants to check thread start")
           if (t == null) {
             logger.debug("waspi thread is null")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi thread is null")
           } else if (t.isAlive()) {
             logger.debug("waspi thread seems alive - going to put him down")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi thread seems alive - going to put him down")
             stopWaspProcess()
           } else {
             logger.debug("waspi thread seems dead (or unknown)")
-            dbActorSel ! LogDataMessage("INFO from XBeeActor", "waspi thread seems dead (or unknown)")
           }
         }
         case "stop" => {
           val name = self.path.toString()
           logger.info(s"shutting myself down: $name ")
-          dbActorSel ! LogDataMessage("INFO from XBeeActor", s"shutting myself down: $name ")
           context.stop(self)
         }
         case _ => {
           logger.debug(s"XBeeActor got message: $value")
-          dbActorSel ! LogDataMessage("INFO from XBeeActor", s"xbee-actor got other unhandled XBeeActorCommand: $value")
         }
       }
     }
   }
-
 }
