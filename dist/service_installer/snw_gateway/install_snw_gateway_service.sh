@@ -7,6 +7,7 @@ export INSTALL_DIR="/opt/snw_gateway"
 export PIDFILE="/opt/snw_gateway/pidfile.pid"
 
 SERVICE_UNIT="$INSTALL_DIR/bin/snw_gateway.service"
+UPDATE_SCRIPT="$INSTALL_DIR/bin/update_gateway.sh"
 export USER="snwgateway"
 
 LIBRXTXPKG=librxtx-java
@@ -35,6 +36,9 @@ mkdir -p "$INSTALL_DIR"
 
 echo "Copying files to $INSTALL_DIR..."
 cp -R "../../" "$INSTALL_DIR"
+
+echo "Creating updater script..."
+envsubst '$INSTALL_DIR $USER $PIDFILE' < update_gateway.sh.template > "$UPDATE_SCRIPT"
 
 echo "Creating service unit $SERVICE_UNIT..."
 envsubst '$INSTALL_DIR $USER $PIDFILE' < snw_gateway.service.template > "$SERVICE_UNIT"

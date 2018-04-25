@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+# exit when any command fails
+set -e
+
+BACKUP_DATE=$(date "+%Y-%m-%d")
+TEMP_DIR="/tmp/snw_gateway_update_$BACKUP_DATE"
+BACKUP_DIR="${INSTALL_DIR}_backup_$BACKUP_DATE"
+
+
+if [[ -z "$1" ]] ; then
+    echo "File parameter missing."
+    echo "Usage: update_gateway.sh <zipfile_with_gateway>"
+    exit 1
+fi
+
+if [[ ! -f "$1" ]] ; then
+    >&2 echo "File '$1' does not exist."
+    exit 1
+fi
+
+if [[ -f "$PIDFILE" ]] ; then
+    >&2 echo "pid file '$PIDFILE' exists. Make sure service is not running, delete pid file and try again."
+    exit 1
+fi
+
+echo "unpacking update zip to tmp..."
+unzip "$1" -d "$TEMP_DIR"
+UPDATE_DIR="$TEMP_DIR/$(ls $TEMP_DIR)"
+
+## save service file and update_script
+mv "$INSTALL_DIR" "$BACKUP_DIR"
+mv "$UPDATE_DIR" "$INSTALL_DIR"
+
+mv "$INSTALL_DIR/conf" "$INSTALL_DIR/conf_new"
+mv "$INSTALL_DIR/bin" "$INSTALL_DIR/bin_new"
+
+echo "restoring olf bin and conf directories..."
+cp -r "$BACKUP_DIR/conf" "$INSTALL_DIR/"
+cp -r "$BACKUP_DIR/bin" "$INSTALL_DIR/"
+
+chown -R $USER:$USER "$INSTALL_DIR"
+
+echo "deleting temp folder..."
+rm -rf "$TEMP_DIR"
+
+echo "update done"

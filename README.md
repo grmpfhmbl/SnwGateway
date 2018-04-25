@@ -28,7 +28,13 @@ To create the release package just run (_activator.bat_ under Windows)
 This package is meant to be installed on Raspberry PI using Raspian. Should work on any other Linux distribution as
 well. For Windows and MacOS no guarantee :-)
 
+- Install H2 Service
+- Install SnwGateway service
+- Run _inital-data.sql_ script by connecting to H2 database, when installing the gateway for the first time.
 
+### Updating
+
+**TODO** run _update.sh <gateway.zip>_
 
 ## Licenses
 

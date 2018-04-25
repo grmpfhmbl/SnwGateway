@@ -61,6 +61,9 @@ class SosActor extends Actor with MyLogger {
   lazy val UPLINK_SOS_SECURITY_TOKEN: String = play.Play.application.configuration.getString(
     "sensorweb.uplink.sos.securitytoken")
 
+  lazy val UPLINK_SOS_BATCH_SIZE: Int = play.Play.application.configuration.getInt(
+    "sensorweb.uplink.sos.uploadBatchSize")
+
   lazy val VOCAB_NETWORK_IDENTIFIER: String = play.Play.application.configuration.getString(
     "sensorweb.vocab.network.identifier")
   lazy val VOCAB_PREFIX_PROCEDURE: String = play.Play.application.configuration.getString(
@@ -71,6 +74,7 @@ class SosActor extends Actor with MyLogger {
     "sensorweb.vocab.prefix.feature")
   lazy val VOCAB_PREFIX_PHENOMENON: String = play.Play.application.configuration.getString(
     "sensorweb.vocab.prefix.phenomenon")
+
 
   var sosDcpKvp = ""
   var sosDcpPox = ""
@@ -160,7 +164,7 @@ class SosActor extends Actor with MyLogger {
           logger.info("Uploading new observations...")
           // fire and forget :-p
           val uploadFuture = scala.concurrent.Future {
-            upload(fetchFailedObservations = false, 500)
+            upload(fetchFailedObservations = false, UPLINK_SOS_BATCH_SIZE)
           }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
@@ -170,7 +174,7 @@ class SosActor extends Actor with MyLogger {
           logger.info("Uploading previously failed observations...")
           // fire and forget :-p
           val uploadFuture = scala.concurrent.Future {
-            upload(fetchFailedObservations = true, 100)
+            upload(fetchFailedObservations = true, UPLINK_SOS_BATCH_SIZE)
           }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
@@ -182,7 +186,7 @@ class SosActor extends Actor with MyLogger {
           // fire and forget :-p
           //TODO rename newOrFailed to "fetchFailedObservations" and invert true/false
           val uploadFuture = scala.concurrent.Future {
-            uploadTextObservations(newOrFailed = true, 100)
+            uploadTextObservations(newOrFailed = true, UPLINK_SOS_BATCH_SIZE)
           }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
@@ -193,7 +197,7 @@ class SosActor extends Actor with MyLogger {
 
           // fire and forget :-p
           val uploadFuture = scala.concurrent.Future {
-            uploadTextObservations(newOrFailed = false, 100)
+            uploadTextObservations(newOrFailed = false, UPLINK_SOS_BATCH_SIZE)
           }
           // we could still map through those ... but they are handled further down the stream,
           // and each web call has the default timeout, we shouldn't set an overall but rather let it stream dripple
