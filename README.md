@@ -28,9 +28,55 @@ To create the release package just run (_activator.bat_ under Windows)
 This package is meant to be installed on Raspberry PI using Raspian. Should work on any other Linux distribution as
 well. For Windows and MacOS no guarantee :-)
 
-- Install H2 Service
-- Install SnwGateway service
+Copy archive to Raspberry and unzip
+
+```
+    $ unzip gateway2-1.1.zip
+    $ cd gateway2-1.1
+    $ chmod +x service_installer/h2server/*.sh
+    $ chmod +x service_installer/snw_gateway/*.sh
+```
+
+Install H2 database service (*NOTE:* at that point in time the installer **HAS** to be run from within its directory)
+
+```
+    $ cd service_installer/h2server/
+    $ sudo ./install_h2_service.sh
+    $ sudo systemctl start h2server.service   # start database
+    $ systemctl status h2server.service       # check if started correctly
+    $ cd ../..
+```
+
+You should be able to connect to the database service with your browser _http://<hostname_or_ip>:8082/_.
+
+Install SnwGateway service (*NOTE:* at that point in time the installer **HAS** to be run from within its directory)
+
+```
+    $ cd service_installer/snw_gateway/
+    $ sudo ./install_snw_gateway_service.sh
+    $ sudo systemctl start snw_gateway.service  # start service
+    $ systemctl status snw_gateway.service      # check if service started (may take a while)
+    $ tail -f /opt/snw_gateway/logs/application.log  # follow logfile to see if anything went wrong
+```
+
+You should be able to connect to the gateway service with your browser _http://<hostname_or_ip>:9000/_. By default every
+function (MQTT, Upload, XBEE) and the database is an _in memory_ database - so it will be deleted on reboot. See
+[Configuration section](README.md#Configuration) on how to enable functions and persist database.
+
+After first gateway start the database should be empty (for example look under _inventory/list nodes_) so we need
+to fill it with initial data. Find database url and username / password in _/opt/snw_gateway/conf/application.conf_.
+
+```
+    $ cd /opt/snw_gateway/conf/
+    $ runscript_h2.sh ... (TODO) 
+```
+
+
 - Run _inital-data.sql_ script by connecting to H2 database, when installing the gateway for the first time.
+
+### Configuration
+
+**TODO**
 
 ### Updating
 

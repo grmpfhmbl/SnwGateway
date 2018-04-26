@@ -1,6 +1,9 @@
+import com.typesafe.sbt.packager.Keys._
+import com.typesafe.sbt.packager.universal.Keys.{normalizedName, version}
+
 name := """gateway2"""
 
-version := "1.1"
+version := "1.2-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
@@ -61,3 +64,11 @@ javacOptions in Compile ++= Seq(
   "-Xlint:deprecation",
   "-Xlint:unchecked"
 )
+
+//slightly modified version of https://stackoverflow.com/questions/30069329/add-timestamp-to-zip-created-by-sbt-native-packager
+
+name in Universal := {
+  val name = normalizedName.value + "-" + version.value
+  def timestamp = new java.text.SimpleDateFormat("yyyyMMdd") format new java.util.Date()
+  if (isSnapshot.value) s"$name-$timestamp" else name
+}

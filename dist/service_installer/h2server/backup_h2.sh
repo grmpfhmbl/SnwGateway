@@ -31,4 +31,4 @@ fi
 read -p "Press any key to continue... CTRL-C to cancel." -n1 -s
 echo ""
 
-/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.Script -url "$H2_URL" $USER $PWD -script "$BACKUP_FILE" -options compression zip
+/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.Script -user $USER -password $PWD -script "$BACKUP_FILE" -options compression zip -url "$H2_URL"
