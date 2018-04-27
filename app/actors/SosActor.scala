@@ -409,14 +409,18 @@ class SosActor extends Actor with MyLogger {
 
     val dateTimeFormatter = DateTimeFormatter.ISO_DATE_TIME
 
-    val measIsoTime = observation.meastime.toInstant().atZone(ZoneId.systemDefault()).withZoneSameLocal(ZoneId.of("UTC")).format(dateTimeFormatter)
+    val measIsoTime = observation.meastime.toInstant()
+      .atZone(ZoneId.systemDefault()).withZoneSameLocal(ZoneId.of("UTC"))
+      .format(dateTimeFormatter).replace("[UTC]", "") //get rid of the [UTC] at the end of the string.
 
 
     logger.debug(s"Telling $mqttActorSel CmdMqttPublish() ObservationID: ${observation.idsensormeasurement}")
     mqttActorSel ! CmdMqttPublish(msgType = SensorwebObservations,
-      topic = urlify(s"${sensorNode.name}/p${sensorType.sensid}_${sensorType.phenomenon}"),
-      body = s"$measIsoTime;${observation.calcvalue};${sensorType.unit}",
+      topic = urlify(s"${sensorNode.name}"),
+      body = s"$measIsoTime;p${sensorType.sensid}_${sensorType.phenomenon};${observation.calcvalue};${sensorType.unit}",
       retain = false)
+
+    //TODO mark measurements as failed when error!
 
     SensorMeasurement.updateSosState(observation.idsensormeasurement, true, 0)
   }

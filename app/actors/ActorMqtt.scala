@@ -40,8 +40,8 @@ import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 /**
- * These traits / objects hold the prefixes for different services
- */
+  * These traits / objects hold the prefixes for different services
+  */
 trait MqttPrefix {
   def topic: String
 
@@ -82,68 +82,51 @@ object SensorwebObservations extends MqttPrefixes {
 object ActorMqtt {
   val ActorName = "mqtt"
 
+  def props(config: Configuration) = Props(new ActorMqtt(config = config))
+
   case class CmdMqttPublish(msgType: MqttPrefix, topic: String, body: String, retain: Boolean)
 
   case class CmdConnect()
-
-  def props(config: Configuration) = Props(new ActorMqtt(config = config))
 }
 
 /**
- * Provides a connection to an MQTT broker
- */
+  * Provides a connection to an MQTT broker
+  */
 class ActorMqtt(config: Configuration) extends Actor with MyLogger {
-  lazy val wizActorSel: ActorSelection =context.system.actorSelection(s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
-  lazy val procexecActorSel: ActorSelection = context.system.actorSelection(s"/user/${ActorSupervisor.ActorName }/${ProcessExecActor.ActorName }")
+
+  lazy val wizActorSel: ActorSelection = context.system.actorSelection(
+    s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
+  lazy val procexecActorSel: ActorSelection = context.system.actorSelection(
+    s"/user/${ActorSupervisor.ActorName}/${ProcessExecActor.ActorName}")
+
+  var managerRef: Option[ActorRef] = None
 
   //read config
-  val host: String = config.getString("host").getOrElse("localhost")
-  val port: Int = config.getInt("port").getOrElse(1883)
-  val clientId: String = config.getString("clientid").getOrElse("gateway")
-  val user: Option[String] = config.getString("username")
-  val password: Option[String] = config.getString("password")
-  val topicSubscribePrefix: mutable.Buffer[String] = config.getStringList("topic.prefix.subscribe").get.asScala
-  val topicPublishPrefix: String = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
-  val connectRetryTimeout: Int = config.getInt("connectRetryTimeout").getOrElse(60)
-  lazy val managerRef: ActorRef = context.actorOf(Manager.props(new InetSocketAddress(host, port)))
+  val MQTT_HOST: String = config.getString("host").getOrElse("localhost")
+  val MQTT_PORT: Int = config.getInt("port").getOrElse(1883)
+  val MQTT_CLIENTID: String = config.getString("clientid").getOrElse("gateway")
+  val USERNAME: Option[String] = config.getString("username")
+  val PASSWORD: Option[String] = config.getString("password")
+  val TOPIC_SUBSCRIBE_PREFIXES: mutable.Buffer[String] = config.getStringList("topic.prefix.subscribe").get.asScala
+  val TOPIC_PUBLISH_PREFIX: String = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
+  val MQTT_CONNECT_RETRY_TIMEOUT: Int = config.getInt("connectRetryTimeout").getOrElse(60)
 
   private var lastMessageId = 1
-
-  def nextMessageId: Int = {
-    lastMessageId = if (lastMessageId >= 65535)
-      1
-    else
-      lastMessageId + 1
-    lastMessageId
-  }
+  private var connectAttempts = 0; //number of consecutive connection attempts
 
   override def preStart() {
     logger.info("Starting MqttActor")
     connect()
   }
 
-  private def connect(): Unit = {
-    logger.debug(s"Started MqttManager as $managerRef")
-
-    managerRef ! Connect(
-      clientId = clientId,
-      user = user,
-      password = password,
-      cleanSession = false,
-      will = Option(Will(
-        retain = false,
-        qos = AtLeastOnce,
-        topic = s"${SensorwebEventStatus.topic}/$topicPublishPrefix/lastwill",
-        message = s"I disconnected disgracefully.")
-      )
-    )
-  }
-
   /**
-   * Default Actor behaviour
-   * @see akka.actor.Actor.receive
-   */
-  override def receive: Receive = {
+    * Default Actor behaviour
+    *
+    * @see akka.actor.Actor.receive
+    */
+  override def receive = disconnected
+
+  def disconnected: Receive = {
     case CmdStatus => {
       logger.info("Received CmdStatus")
       val status = s"${ActorMqtt.ActorName}: running as ${self.path}.\nNot connected."
@@ -156,32 +139,56 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
     }
 
     case Connected =>
-      logger.info(s"Successfully connected to $host:$port")
+      logger.info(s"Successfully connected to $MQTT_HOST:$MQTT_PORT")
+      this.connectAttempts = 0
 
       //SREI ok, a little bit of magic. Take the list, make to vector and zip it with a new vector filled with AtMostOnce
       //TODO SREI we need to think about how to configure this in a more flexible way. At the moment this works, as we're only interested in SPS-Commands
-      val zippedVector = topicSubscribePrefix.map((x) => {
+      val zippedVector = TOPIC_SUBSCRIBE_PREFIXES.map((x) => {
         s"${SpsAll.topic}/${x}/#" //we only subscribe to SPS stuff
-      }).toVector.zip(Vector.fill(topicSubscribePrefix.length)({
+      }).toVector.zip(Vector.fill(TOPIC_SUBSCRIBE_PREFIXES.length)({
         AtMostOnce
       }))
       logger.debug(zippedVector.mkString(",\n"))
       sender() ! Subscribe(zippedVector, 1)
       context.become(ready(sender()))
 
-    case ConnectionFailure(reason) =>
+    case ConnectionFailure(reason) => {
       import context.system
       import scala.concurrent.ExecutionContext.Implicits.global
-      logger.error(s"Connection to localhost:1883 failed [$reason]")
-      logger.error(s"Will try again in $connectRetryTimeout seconds.")
-      system.scheduler.scheduleOnce(connectRetryTimeout.seconds, self, CmdConnect)
+
+      logger.error(s"Connection to $MQTT_HOST:$MQTT_PORT failed [$reason]")
+      logger.error(s"Will try again in ${MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts} seconds.")
+      context.stop(managerRef.get)
+      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts).seconds, self, CmdConnect)
+    }
+  }
+
+  private def connect(): Unit = {
+    logger.debug(s"Started MqttManager as $managerRef")
+    this.connectAttempts += 1;
+    managerRef = Some(context.actorOf(Manager.props(new InetSocketAddress(MQTT_HOST, MQTT_PORT))))
+
+    managerRef.get ! Connect(
+      clientId = MQTT_CLIENTID,
+      user = USERNAME,
+      password = PASSWORD,
+      cleanSession = false,
+      will = Option(Will(
+        retain = false,
+        qos = AtLeastOnce,
+        topic = s"${SensorwebEventStatus.topic}/$TOPIC_PUBLISH_PREFIX/lastwill",
+        message = s"I disconnected disgracefully.")
+      )
+    )
   }
 
   /**
-   * Once the Actor is Connected we enter the "ready" state
-   * @param mqttManager
-   * @return
-   */
+    * Once the Actor is Connected we enter the "ready" state
+    *
+    * @param mqttManager
+    * @return
+    */
   def ready(mqttManager: ActorRef): Receive = {
 
     case CmdStatus => {
@@ -190,8 +197,9 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       logger.info(status)
       sender() ! scala.util.Success(status)
     }
+
     case Subscribed(vQoS, MessageId(1)) => {
-      logger.info(s"Successfully subscribed to ${topicSubscribePrefix}")
+      logger.info(s"Successfully subscribed to ${TOPIC_SUBSCRIBE_PREFIXES}")
     }
 
     case Published(messageId) => {
@@ -199,17 +207,37 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       logger.debug(s"Message with ID ${messageId.identifier} has been published.")
     }
 
+    case Disconnected => {
+      import context.system
+      import scala.concurrent.ExecutionContext.Implicits.global
+
+      logger.warn(s"Was disconnected. Trying to reconnect in ${MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts} seconds.")
+      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts).seconds, self, CmdConnect)
+      context.stop(managerRef.get)
+      context.become(disconnected)
+    }
+
+    case NotConnected => {
+      import context.system
+      import scala.concurrent.ExecutionContext.Implicits.global
+
+      logger.warn(s"Was not connected. Trying to connect in ${MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts} seconds.")
+      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts).seconds, self, CmdConnect)
+      context.stop(managerRef.get)
+      context.become(disconnected)
+    }
+
     case Error(kind) => {
       logger.warn(s"Error $kind.")
     }
 
     // AKMO missing "sections" list GetCapabilities (even empty req) requests should possible, then return full Capa as default
-      /*
-      tested with:
-      mosquitto_pub -u mobile -P mobile2014 -t "sps/getCapabilities/sensorweb/admin/outbox/gateway0013A20040BA23BE" -m "{ \"messageUUID\" : \"f6fd0652-7a1a-4309-82bd-0f3f8d117a12\"}
+    /*
+    tested with:
+    mosquitto_pub -u mobile -P mobile2014 -t "sps/getCapabilities/sensorweb/admin/outbox/gateway0013A20040BA23BE" -m "{ \"messageUUID\" : \"f6fd0652-7a1a-4309-82bd-0f3f8d117a12\"}
 
-      mosquitto_pub -u mobile -P mobile2014 -t "sps/getCapabilities/sensorweb/admin/outbox/gateway0013A20040BA23BE" -m "{ }"
-       */
+    mosquitto_pub -u mobile -P mobile2014 -t "sps/getCapabilities/sensorweb/admin/outbox/gateway0013A20040BA23BE" -m "{ }"
+     */
     case Message(topic, payload) => {
       val message = new String(payload.to[Array], "UTF-8")
       topic.split("/").take(2).mkString("/") match {
@@ -221,33 +249,34 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
           // create a JsValue from Request
           val request = MqttGetCapabilitiesReq.fromJsValue(Json.parse(message))
           val reply = if (request.sections.isDefined) {
-            val theSections = request.sections.getOrElse(List("serviceIdentification", "operations","tasks"))
+            val theSections = request.sections.getOrElse(List("serviceIdentification", "operations", "tasks"))
             new MqttGetCapabilitiesResp(
               messageUUID = Some(UUID.randomUUID()),
               serviceIdentification =
                 (if (theSections.contains("serviceIdentification"))
-                  Some("Scala Sensorweb Gateway Version -0.0.1 pre-alpha")
-                else
-                  None
+                   Some("Scala Sensorweb Gateway Version -0.0.1 pre-alpha")
+                 else
+                   None
                   ),
               operations = (if (theSections.contains("operations"))
-                Some(List("getCapabilities", "describeTask" , "submitTask"))
-              else
-                None
+                              Some(List("getCapabilities", "describeTask", "submitTask"))
+                            else
+                              None
                 ),
               tasks = (if (theSections.contains("tasks"))
-                Some(List("setWizMode","ps","df","free","reboot"))
-              else None
+                         Some(List("setWizMode", "ps", "df", "free", "reboot"))
+                       else None
                 )
             )
-          } else {
-            new MqttGetCapabilitiesResp(
-              messageUUID = Some(UUID.randomUUID()),
-              serviceIdentification = Some("Scala Sensorweb Gateway Version -0.0.1 pre-alpha"),
-              operations = Some(List("getCapabilities", "describeTask" , "submitTask")),
-              tasks = Some(List("setWizMode","ps","df","free","reboot"))
-            )
           }
+                      else {
+                        new MqttGetCapabilitiesResp(
+                          messageUUID = Some(UUID.randomUUID()),
+                          serviceIdentification = Some("Scala Sensorweb Gateway Version -0.0.1 pre-alpha"),
+                          operations = Some(List("getCapabilities", "describeTask", "submitTask")),
+                          tasks = Some(List("setWizMode", "ps", "df", "free", "reboot"))
+                        )
+                      }
 
           //create reply message
 
@@ -318,10 +347,12 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
               logger.info("Setting WIZ mode...")
               if (request.parameter.isEmpty) {
                 ("Error: request.parameter.isEmpty", Map[String, String]())
-              } else {
+              }
+              else {
                 if (!request.parameter.contains("mode")) {
                   ("Error: mode parameter not available", Map[String, String]())
-                } else {
+                }
+                else {
                   if (request.parameter.get("mode").isDefined && request.parameter.get("mode").isDefined) {
                     val modeValue = request.parameter.get("mode").get
                     modeValue match {
@@ -354,7 +385,8 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
                         ("Warn: not handled", Map[String, String]())
                       }
                     }
-                  } else {
+                  }
+                  else {
                     ("Error: mode value not available", Map[String, String]())
                   }
                 }
@@ -452,15 +484,15 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
             retain = false)
 
           //to simulate something long running, we first reply with running and then with success
-//          import play.api.Play.current
-//          import play.api.libs.concurrent.Execution.Implicits._
-//          Akka.system.scheduler.scheduleOnce(30.seconds,
-//            self,
-//            CmdMqttPublish(msgType = SpsGetCapabilities,
-//              topic = request.messageUUID.map(_.toString()).getOrElse("public"),
-//              body = Json.stringify(replySuccess.asJson),
-//              retain = false)
-//          )
+          //          import play.api.Play.current
+          //          import play.api.libs.concurrent.Execution.Implicits._
+          //          Akka.system.scheduler.scheduleOnce(30.seconds,
+          //            self,
+          //            CmdMqttPublish(msgType = SpsGetCapabilities,
+          //              topic = request.messageUUID.map(_.toString()).getOrElse("public"),
+          //              body = Json.stringify(replySuccess.asJson),
+          //              retain = false)
+          //          )
         } //SpsSubmitTask
         case _ => {
           logger.debug(s"Message of unknown topic received: [$topic] $message")
@@ -469,15 +501,23 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
     }
 
     case CmdMqttPublish(msgType, topic, body, retain) => {
-      logger.debug(s"Publishing [${msgType.topic}/${topicPublishPrefix}/${topic}] ${body}")
+      logger.debug(s"Publishing [${msgType.topic}/${TOPIC_PUBLISH_PREFIX}/${topic}] ${body}")
       mqttManager ! Publish(
-        topic = s"${msgType.topic}/${topicPublishPrefix}/${topic}",
+        topic = s"${msgType.topic}/${TOPIC_PUBLISH_PREFIX}/${topic}",
         payload = body.getBytes("UTF-8").to[Vector],
         qos = AtLeastOnce,
         messageId = Option(MessageId(this.nextMessageId)),
         retain = retain
       )
     }
+  }
+
+  def nextMessageId: Int = {
+    lastMessageId = if (lastMessageId >= 65535)
+                      1
+                    else
+                      lastMessageId + 1
+    lastMessageId
   }
 
   /*

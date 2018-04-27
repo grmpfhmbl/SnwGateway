@@ -51,26 +51,41 @@ object Global extends GlobalSettings with MyLogger {
     //FIXME SREI this is pretty fucked up. make real error handling here
     val subConfig = config.getConfig("sensorweb").get
     val actorSupervisor = Akka.system().actorOf(ActorSupervisor.props(subConfig), ActorSupervisor.ActorName)
+    val actorScheduleTimeout = subConfig.getInt("supervisor.actorschedule.timeout").getOrElse(45)
+    val actorInitialScheduleTimeout = 5
 
     import play.api.libs.concurrent.Execution.Implicits._
     implicit val timeout = Timeout(10.seconds)
+    var actorsScheduled = 0;
 
     // doesn't do much for initialisation
     //Akka.system().scheduler.scheduleOnce(20.seconds, actorSupervisor,CmdGetOrStart(ProcessExecActor.ActorName))
 
     //TODO SREI think of better startup sequence / waiting time
     if (subConfig.getBoolean("xbee.gateway.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(5.seconds, actorSupervisor,CmdGetOrStart(XBeeActor.ActorName))
+      logger.info(s"Start of ${XBeeActor.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
+      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
+        actorSupervisor,CmdGetOrStart(XBeeActor.ActorName))
+      actorsScheduled += 1;
     }
     if (subConfig.getBoolean("uplink.mqtt.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(30.seconds, actorSupervisor,CmdGetOrStart(ActorMqtt.ActorName))
+      logger.info(s"Start of ${ActorMqtt.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
+      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
+        actorSupervisor,CmdGetOrStart(ActorMqtt.ActorName))
+      actorsScheduled += 1;
 
     if (subConfig.getBoolean("uplink.sos.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(90.seconds, actorSupervisor,CmdGetOrStart(SosActor.ActorName))
+      logger.info(s"Start of ${SosActor.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
+      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
+        actorSupervisor,CmdGetOrStart(SosActor.ActorName))
+      actorsScheduled += 1;
     }
 
     if (subConfig.getBoolean("wiz.enabled").getOrElse(false)) {
-      Akka.system().scheduler.scheduleOnce(120.seconds, actorSupervisor,CmdGetOrStart(WizActor.ActorName))
+      logger.info(s"Start of ${WizActor.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
+      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
+        actorSupervisor,CmdGetOrStart(WizActor.ActorName))
+      actorsScheduled += 1;
     }
 
     }
