@@ -39,6 +39,7 @@ cp -R "../../" "$INSTALL_DIR"
 
 echo "Creating updater script..."
 envsubst '$INSTALL_DIR $USER $PIDFILE' < update_gateway.sh.template > "$UPDATE_SCRIPT"
+chmod +x "$UPDATE_SCRIPT"
 
 echo "Creating service unit $SERVICE_UNIT..."
 envsubst '$INSTALL_DIR $USER $PIDFILE' < snw_gateway.service.template > "$SERVICE_UNIT"

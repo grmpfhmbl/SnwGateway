@@ -69,6 +69,8 @@ to fill it with initial data. Find database url and username / password in _/opt
 ```
     $ cd /opt/snw_gateway/conf/
     $ runscript_h2.sh ... (TODO) 
+    
+    update sensormeasurements set soserrorcode = -1, sostransmitted = false;
 ```
 
 
@@ -77,10 +79,23 @@ to fill it with initial data. Find database url and username / password in _/opt
 ### Configuration
 
 **TODO**
+Change _node_equivalent = "0013A20040C5407F"_ to correct value!
 
 ### Updating
 
-**TODO** run _update.sh <gateway.zip>_
+Transfer the zip file containing the new version of the gateway to your Raspberry PI.
+
+```
+    $ sudo systemctl status snw_gateway.service  ## stop gateway service before updating
+    $ sudo /opt/snw_gateway/bin/_gateway.sh <gateway zipfile> 
+```
+
+The updater will update the libraries etc. but not the configuration and binary
+files. Check _/opt/snw_gateway/bin_new_ and _/opt/snw_gateway/conf_new_ for
+the binary and configuration files provided with the new version and update the
+old ones if necessary.
+
+**TODO** explain database update (H2) and how to check service installer unit.
 
 ## Licenses
 

@@ -38,6 +38,7 @@ mv "$INSTALL_DIR/bin" "$INSTALL_DIR/bin_new"
 echo "restoring olf bin and conf directories..."
 cp -r "$BACKUP_DIR/conf" "$INSTALL_DIR/"
 cp -r "$BACKUP_DIR/bin" "$INSTALL_DIR/"
+cp -u "${INSTALL_DIR}/bin_new/gateway2" "${INSTALL_DIR}/bin/gateway2"
 
 chown -R $USER:$USER "$INSTALL_DIR"
 
