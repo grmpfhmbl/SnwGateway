@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "xalan" % "serializer" % "2.7.2", //fixes resovler bug in IDEA14 http://stackoverflow.com/questions/26633298/sbt-xalanserializer-error-in-intellij
   "net.sigusr" %% "scala-mqtt-client" % "0.6.0",
   "com.github.jodersky" %% "flow" % "2.2.0",
-  "com.github.nscala-time" %% "nscala-time" % "2.0.0",
+  "com.github.nscala-time" %% "nscala-time" % "2.0.0"
   //"mysql" % "mysql-connector-java" % "5.1.6"
 )
 
