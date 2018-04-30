@@ -14,9 +14,9 @@ libraryDependencies ++= Seq(
   anorm,
   cache,
   ws,
-  "com.rapplogic" % "xbee-api" % "0.9",
+  "com.rapplogic" % "xbee-api" % "0.9.1",
   "org.slf4j" % "log4j-over-slf4j" % "1.7.6", // for XBEE Logging
-  "org.rxtx" % "rxtxcomm" % "2007-xbee-0.9",
+  //"org.rxtx" % "rxtxcomm" % "2007-xbee-0.9",
   "xalan" % "serializer" % "2.7.2", //fixes resovler bug in IDEA14 http://stackoverflow.com/questions/26633298/sbt-xalanserializer-error-in-intellij
   "net.sigusr" %% "scala-mqtt-client" % "0.6.0",
   "com.github.jodersky" %% "flow" % "2.2.0",
