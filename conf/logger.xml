@@ -3,39 +3,44 @@
     <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel"/>
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${application.home}/logs/application.log</file>
+        <file>${application.home}/logs/inDev.application.log</file>
         <encoder>
             <pattern>%date - [%level] - from %logger in %thread %n%message%n%xException%n</pattern>
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- rollover daily -->
-            <fileNamePattern>${application.home}/logs/application.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${application.home}/logs/inDev.application.%d{yyyy-MM-dd_HH-mm}.log</fileNamePattern>
             <maxHistory>90</maxHistory>
             <totalSizeCap>2GB</totalSizeCap>
         </rollingPolicy>
     </appender>
 
+    <!-- STD OUT filter will only show WARN and above. This is to prevent system log spam. -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>TRACE</level>
+        </filter>
+
         <encoder>
             <pattern>%coloredLevel %logger{15} - %message%n%xException{5}</pattern>
         </encoder>
     </appender>
 
-    <logger name="play" level="INFO"/>
-    <logger name="application" level="INFO"/>
-    <logger name="akka" level="INFO"/>
+    <logger name="play" level="DEBUG"/>
+    <logger name="application" level="DEBUG"/>
+    <logger name="akka" level="DEBUG"/>
 
-    <!--<logger name="application.Global" level="INFO"/>-->
-    <logger name="application.actors" level="INFO"/>
+    <logger name="application.Global" level="DEBUG"/>
+    <logger name="application.actors" level="DEBUG"/>
 
     <!--<logger name="application.actors.SosActor" level="INFO"/>-->
     <!--<logger name="application.actors.WizActor" level="INFO"/>-->
     <!--<logger name="application.actors.XBeeActor" level="INFO"/>-->
-    <logger name="application.actors.ActorMqtt" level="DEBUG"/>
+    <!--<logger name="application.actors.ActorMqtt" level="DEBUG"/>-->
     <!--<logger name="application.actors.ActorSupervisor" level="INFO"/>-->
 
-    <logger name="application.models" level="WARN"/>
+    <logger name="application.models" level="DEBUG"/>
 
     <!--<logger name="application.utils" level="INFO"/>-->
     <!--<logger name="application.utils.WaspProcess" level="INFO"/>-->
@@ -43,7 +48,6 @@
 
     <logger name="com.rapplogic.xbee" level="INFO"/>
     <logger name="com.rapplogic.xbee.examples" level="INFO"/>
-
 
     <!-- Off these ones as they are annoying, and anyway we manage configuration ourself -->
     <logger name="com.avaje.ebean.config.PropertyMapLoader" level="OFF"/>
