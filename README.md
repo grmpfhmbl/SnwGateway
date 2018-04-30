@@ -1,12 +1,8 @@
 Gateway2 Akka / Scala / Play
 =================================
 
-This is the Sensor Gateway.
-
 <!-- [![Build Status][build-status-badge]][build-status-url] -->
-[![Issues][issues-badge]][issues-url]
-
-[![License][license-badge]][license-url]
+[![License][license-badge]][license-url] [![Issues][issues-badge]][issues-url]
 
 <!-- 
 [build-status-badge]: https://img.shields.io/travis/ZGIS/smart-portal-backend.svg?style=flat-square
@@ -16,6 +12,8 @@ This is the Sensor Gateway.
 [issues-url]: https://github.com/grmpfhmbl/SnwGateway/issues
 [license-badge]: https://img.shields.io/badge/License-Apache%202-blue.svg?style=flat-square
 [license-url]: LICENSE
+
+This is the Sensor Gateway.
 
 ## Build
 
@@ -76,12 +74,8 @@ to fill it with initial data. Find database url and username / password in _/opt
 
 - Run _inital-data.sql_ script by connecting to H2 database, when installing the gateway for the first time.
 
-### Configuration
 
-**TODO**
-Change _node_equivalent = "0013A20040C5407F"_ to correct value!
-
-### Updating
+## Updating from older Versions
 
 Transfer the zip file containing the new version of the gateway to your Raspberry PI.
 
@@ -96,6 +90,39 @@ the binary and configuration files provided with the new version and update the
 old ones if necessary.
 
 **TODO** explain database update (H2) and how to check service installer unit.
+
+
+## Configuration
+
+**TODO**
+Change _node_equivalent = "0013A20040C5407F"_ to correct value!
+
+
+## Notes for Developers
+
+### Virtual serial (COM) ports for testing
+
+#### MacOS X / Linux
+
+Install `socat` using home brew `brew install socat` or in your Linux distribution using their package manager (e.g. 
+`sudo apt install socat`).
+
+```
+    $ SOCAT_PORT_USER=<username>
+    $ SOCAT_PORT_MASTER=master
+    $ SOCAT_PORT_SLAVE=slave
+    $ sudo socat -d -d -d -d -lf /tmp/socat pty,link=/dev/$SOCAT_PORT_MASTER,raw,echo=0,user=$SOCAT_PORT_USER,group=staff pty,link=/dev/$SOCAT_PORT_SLAVE,raw,echo=0,user=$SOCAT_PORT_USER,group=staff &
+```
+
+The last command should output something like `[1] 44636` and two new devices `/dev/master` and `/dev/slave` should have
+been created. To test simply `cat /dev/slave`, open a new terminal and `echo "hello world" > /dev/master`. You should see
+_hello world_ printed to the screen. To shutdown the port `sudo kill <PID>` and replace the PID with the number after
+`[1]` from the output above. If you need more than one port, just replace _master_/_slave_ with something else.
+
+#### Windows
+
+There's very likely a tool that can do that :-)
+
 
 ## Licenses
 

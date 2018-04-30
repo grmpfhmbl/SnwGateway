@@ -3,7 +3,7 @@ import com.typesafe.sbt.packager.universal.Keys.{normalizedName, version}
 
 name := """gateway2"""
 
-version := "1.2-SNAPSHOT"
+version := "1.3-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(
   "net.sigusr" %% "scala-mqtt-client" % "0.6.0",
   "com.github.jodersky" %% "flow" % "2.2.0",
   "com.github.nscala-time" %% "nscala-time" % "2.0.0",
-  "mysql" % "mysql-connector-java" % "5.1.6"
+  //"mysql" % "mysql-connector-java" % "5.1.6"
 )
 
 libraryDependencies ++= Seq(

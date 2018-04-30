@@ -35,7 +35,8 @@ object XBeeActor {
 
 //TODO SREI implicit val DbActor, so the actor does not have to find the Database by itself
 class XBeeActor(config: Configuration) extends Actor with MyLogger {
-  val Comport = config.getString("gateway.comport").getOrElse("/dev/ttyUSB0")
+  assert(config.getString("serial.port").isDefined, "xbee.serial.port must be defined")
+  val SERIAL_PORT = config.getString("serial.port").getOrElse("/dev/ttyUSB0")
 
   // doch wieder irgendwie singleton pattern machen,
   // aber scala mag den private constructor wohl nicht und bildet singletons als object anstatt classess ab ...
@@ -59,7 +60,7 @@ class XBeeActor(config: Configuration) extends Actor with MyLogger {
    */
 
   def startWaspProcess() {
-    waspi = new WaspProcess(Comport)
+    waspi = new WaspProcess(SERIAL_PORT)
     t = new Thread(waspi)
     t.start() // --- Start thread
   }
@@ -72,7 +73,7 @@ class XBeeActor(config: Configuration) extends Actor with MyLogger {
   }
 
   override def preStart(): Unit = {
-    logger.debug(s"XBeeActor is now getting ready... initialising waspi thread with $Comport")
+    logger.debug(s"XBeeActor is now getting ready... initialising waspi thread with $SERIAL_PORT")
     startWaspProcess()
   }
 

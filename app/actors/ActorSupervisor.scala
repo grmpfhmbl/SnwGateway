@@ -23,6 +23,7 @@ import actors.ActorMqtt.CmdMqttPublish
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import models.SensorNode
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.{Configuration, Logger}
 import play.libs.Akka
@@ -59,7 +60,6 @@ class ActorSupervisor(config: Configuration) extends Actor with MyLogger {
 
     //TODO SREI I don't really like this, as it's working around the messaging. But sending a message to yourself and waiting for for yourself at this point doesn't work either.
     val dbActor = context.actorOf(Props[DbActor], DbActor.ActorName)
-    dbActor ! LogDataMessage(s"INFO from '${ActorSupervisor.ActorName}'", s"ActorSupervisor started as '${self.path}'")
 
     if (config.getBoolean("supervisor.heartbeat.enabled").getOrElse(false)) {
       logger.info("Scheduling heartbeat...")

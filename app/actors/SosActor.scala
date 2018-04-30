@@ -249,6 +249,7 @@ class SosActor extends Actor with MyLogger {
     */
   def upload(fetchFailedObservations: Boolean, maxNum: Long) = {
     // val updateListMeas = SensorMeasurement.getAllNewSosForUpload
+    //FIXME implement something like "still uploading" to prevent from multiple uploads interfering.
     val updateListMeas = SensorMeasurement.getSelectForSosUpload(fetchFailedObservations, maxNum)
     val obsToUpload = updateListMeas.length
 

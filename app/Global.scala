@@ -20,7 +20,8 @@ import actors._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigValueType
-import play.api.{GlobalSettings, Logger}
+import models.SensorNode
+import play.api.{GlobalSettings, Logger, Play, PlayException}
 import play.libs.Akka
 import utils.MyLogger
 
@@ -46,10 +47,19 @@ object Global extends GlobalSettings with MyLogger {
         }
       logger.debug(f"${key}%45s = ${cfgVal}")
     }
+    val subConfig = config.getConfig("sensorweb").get
+
+    logger.info("Checking basic configuration...")
+    lazy val UPLINK_SOS_NODE_EQUIVALENT: String = subConfig.getString("uplink.sos.node_equivalent").getOrElse("")
+    logger.info(s"Finding SOS-UPLINK node (${UPLINK_SOS_NODE_EQUIVALENT}) in Database.")
+    if (SensorNode.getSensorNodeByExtendedAddress(UPLINK_SOS_NODE_EQUIVALENT).isEmpty) {
+      logger.error(s"Configured uplink node application.config does not equal uplink node in database.")
+      //FIXME this is for sure not the way of doing this correctly...
+      throw new PlayException(s"Configured uplink node application.config does not equal uplink node in database.", s"Configured uplink node application.config does not equal uplink node in database.")
+    }
+
 
     logger.info("Creating Supervisor Actor...")
-    //FIXME SREI this is pretty fucked up. make real error handling here
-    val subConfig = config.getConfig("sensorweb").get
     val actorSupervisor = Akka.system().actorOf(ActorSupervisor.props(subConfig), ActorSupervisor.ActorName)
     val actorScheduleTimeout = subConfig.getInt("supervisor.actorschedule.timeout").getOrElse(45)
     val actorInitialScheduleTimeout = 5
@@ -61,33 +71,27 @@ object Global extends GlobalSettings with MyLogger {
     // doesn't do much for initialisation
     //Akka.system().scheduler.scheduleOnce(20.seconds, actorSupervisor,CmdGetOrStart(ProcessExecActor.ActorName))
 
-    //TODO SREI think of better startup sequence / waiting time
-    if (subConfig.getBoolean("xbee.gateway.enabled").getOrElse(false)) {
-      logger.info(s"Start of ${XBeeActor.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
-      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
-        actorSupervisor,CmdGetOrStart(XBeeActor.ActorName))
+    def scheduleActorStart(actorName: String) = {
+      val timeout = actorScheduleTimeout * actorsScheduled + actorInitialScheduleTimeout
+      logger.info(s"Start of ${actorName} scheduled in ${timeout.seconds}...")
+      Akka.system().scheduler.scheduleOnce(timeout.seconds, actorSupervisor, CmdGetOrStart(actorName))
       actorsScheduled += 1;
     }
+
+    if (subConfig.getBoolean("xbee.enabled").getOrElse(false)) {
+      scheduleActorStart(XBeeActor.ActorName)
+    }
+
     if (subConfig.getBoolean("uplink.mqtt.enabled").getOrElse(false)) {
-      logger.info(s"Start of ${ActorMqtt.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
-      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
-        actorSupervisor,CmdGetOrStart(ActorMqtt.ActorName))
-      actorsScheduled += 1;
+      scheduleActorStart(ActorMqtt.ActorName)
+    }
 
     if (subConfig.getBoolean("uplink.sos.enabled").getOrElse(false)) {
-      logger.info(s"Start of ${SosActor.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
-      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
-        actorSupervisor,CmdGetOrStart(SosActor.ActorName))
-      actorsScheduled += 1;
+      scheduleActorStart(SosActor.ActorName)
     }
 
     if (subConfig.getBoolean("wiz.enabled").getOrElse(false)) {
-      logger.info(s"Start of ${WizActor.ActorName} scheduled in ${(actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds}...")
-      Akka.system().scheduler.scheduleOnce((actorScheduleTimeout*actorsScheduled+actorInitialScheduleTimeout).seconds,
-        actorSupervisor,CmdGetOrStart(WizActor.ActorName))
-      actorsScheduled += 1;
-    }
-
+      scheduleActorStart(WizActor.ActorName)
     }
 
     /*
