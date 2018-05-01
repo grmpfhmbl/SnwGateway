@@ -24,6 +24,7 @@ import akka.io.{IO, Tcp}
 import akka.io.IO._
 import akka.util.ByteString
 
+@Deprecated
 object TaromActor {
   val ACTOR_NAME = "tarom"
 
@@ -33,6 +34,7 @@ object TaromActor {
 
 // der referenzierte listener is der actor der dann die datenpakete weiterverarbeiten soll
 // in Global.scala setzen bei instanzierung
+@Deprecated
 class TaromActor(remote: InetSocketAddress, listener: ActorRef) extends Actor {
 
   import context.system

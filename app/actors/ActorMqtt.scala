@@ -87,6 +87,7 @@ object ActorMqtt {
   case class CmdMqttPublish(msgType: MqttPrefix, topic: String, body: String, retain: Boolean)
 
   case class CmdConnect()
+
 }
 
 /**
@@ -98,9 +99,6 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
     s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
   lazy val procexecActorSel: ActorSelection = context.system.actorSelection(
     s"/user/${ActorSupervisor.ActorName}/${ProcessExecActor.ActorName}")
-
-  var managerRef: Option[ActorRef] = None
-
   //read config
   val MQTT_HOST: String = config.getString("host").getOrElse("localhost")
   val MQTT_PORT: Int = config.getInt("port").getOrElse(1883)
@@ -110,13 +108,32 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
   val TOPIC_SUBSCRIBE_PREFIXES: mutable.Buffer[String] = config.getStringList("topic.prefix.subscribe").get.asScala
   val TOPIC_PUBLISH_PREFIX: String = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
   val MQTT_CONNECT_RETRY_TIMEOUT: Int = config.getInt("connectRetryTimeout").getOrElse(60)
-
+  var managerRef: Option[ActorRef] = None
   private var lastMessageId = 1
   private var connectAttempts = 0; //number of consecutive connection attempts
 
   override def preStart() {
     logger.info("Starting MqttActor")
     connect()
+  }
+
+  private def connect(): Unit = {
+    logger.debug(s"Started MqttManager as $managerRef")
+    this.connectAttempts += 1;
+    managerRef = Some(context.actorOf(Manager.props(new InetSocketAddress(MQTT_HOST, MQTT_PORT))))
+
+    managerRef.get ! Connect(
+      clientId = MQTT_CLIENTID,
+      user = USERNAME,
+      password = PASSWORD,
+      cleanSession = false,
+      will = Option(Will(
+        retain = false,
+        qos = AtLeastOnce,
+        topic = s"${SensorwebEventStatus.topic}/$TOPIC_PUBLISH_PREFIX/lastwill",
+        message = s"I disconnected disgracefully.")
+      )
+    )
   }
 
   /**
@@ -158,29 +175,10 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       import scala.concurrent.ExecutionContext.Implicits.global
 
       logger.error(s"Connection to $MQTT_HOST:$MQTT_PORT failed [$reason]")
-      logger.error(s"Will try again in ${MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts} seconds.")
+      logger.error(s"Will try again in ${MQTT_CONNECT_RETRY_TIMEOUT * connectAttempts} seconds.")
       context.stop(managerRef.get)
-      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts).seconds, self, CmdConnect)
+      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT * connectAttempts).seconds, self, CmdConnect)
     }
-  }
-
-  private def connect(): Unit = {
-    logger.debug(s"Started MqttManager as $managerRef")
-    this.connectAttempts += 1;
-    managerRef = Some(context.actorOf(Manager.props(new InetSocketAddress(MQTT_HOST, MQTT_PORT))))
-
-    managerRef.get ! Connect(
-      clientId = MQTT_CLIENTID,
-      user = USERNAME,
-      password = PASSWORD,
-      cleanSession = false,
-      will = Option(Will(
-        retain = false,
-        qos = AtLeastOnce,
-        topic = s"${SensorwebEventStatus.topic}/$TOPIC_PUBLISH_PREFIX/lastwill",
-        message = s"I disconnected disgracefully.")
-      )
-    )
   }
 
   /**
@@ -208,23 +206,11 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
     }
 
     case Disconnected => {
-      import context.system
-      import scala.concurrent.ExecutionContext.Implicits.global
-
-      logger.warn(s"Was disconnected. Trying to reconnect in ${MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts} seconds.")
-      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts).seconds, self, CmdConnect)
-      context.stop(managerRef.get)
-      context.become(disconnected)
+      handleDisconnect()
     }
 
     case NotConnected => {
-      import context.system
-      import scala.concurrent.ExecutionContext.Implicits.global
-
-      logger.warn(s"Was not connected. Trying to connect in ${MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts} seconds.")
-      system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT*connectAttempts).seconds, self, CmdConnect)
-      context.stop(managerRef.get)
-      context.become(disconnected)
+      handleDisconnect()
     }
 
     case Error(kind) => {
@@ -512,6 +498,23 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
     }
   }
 
+  /**
+    * tries to reconnect actor to Mqtt.
+    */
+  def handleDisconnect() = {
+    import context.system
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    logger.warn(s"Was disconnected. Trying to reconnect in ${MQTT_CONNECT_RETRY_TIMEOUT * connectAttempts} seconds.")
+    system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT * connectAttempts).seconds, self, CmdConnect)
+    context.stop(managerRef.get)
+    context.become(disconnected)
+  }
+
+  /**
+    * generates next messageId and returns it. MessageIds will be between 1 and 65536.
+    * @return Int containing next MessageId
+    */
   def nextMessageId: Int = {
     lastMessageId = if (lastMessageId >= 65535)
                       1
@@ -519,13 +522,4 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
                       lastMessageId + 1
     lastMessageId
   }
-
-  /*
-    def disconnecting(): Receive = {
-      case Disconnected ⇒
-        println("Disconnected from localhost:1883")
-        ActorMqtt.shutdown()
-    }
-  */
-
 }

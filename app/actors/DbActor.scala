@@ -20,9 +20,10 @@ package actors
 import scala.util.Try
 import play.api.Logger
 import java.sql.Timestamp
-import org.joda.time.DateTime
-import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
 
+import actors.ActorSupervisor.CmdStatus
+import org.joda.time.DateTime
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import akka.actor.Actor
 import models._
 
@@ -91,6 +92,15 @@ class DbActor extends Actor {
     case WizDataMessage(sid, ts, data) => {
       logger.debug(s"got WIZ data: ${sid}, ${ts}, ${data}")
       insertWizMeasurement(sid, ts, data)
+    }
+
+    case CmdStatus => {
+      logger.debug(s"Received CmdStatus from ${sender()}")
+      sender() ! "Alive and rocking!!!"
+    }
+
+    case default => {
+      logger.warn(s"Received unknown message ${default} from ${sender()}")
     }
   }
 

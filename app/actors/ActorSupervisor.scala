@@ -122,6 +122,12 @@ class ActorSupervisor(config: Configuration) extends Actor with MyLogger {
               actor ! SosActorCommand(1, "config")
               sender ! akka.actor.Status.Success(actor)
             }
+            case ActorTarom.ActorName => {
+              //FIXME SREI errorhandling!!!
+              val props = ActorTarom.props(config.getConfig("tarom").get)
+              val actor = context.actorOf(props, ActorTarom.ActorName)
+              sender ! akka.actor.Status.Success(actor)
+            }
             case ProcessExecActor.ActorName => {
               //FIXME SREI errorhandling!!!
               val actor = context.actorOf(Props[ProcessExecActor], ProcessExecActor.ActorName)
@@ -147,20 +153,16 @@ class ActorSupervisor(config: Configuration) extends Actor with MyLogger {
     case CmdStatus => {
       logger.info("Received CmdStatus")
       implicit val timeout = Timeout(100.milliseconds)
-
+      //TODO make this (and all the actors) return an "ActorStatus" thingy so we can use this so show on a web page.
       var futureList = List[Future[(String, String)]]()
       context.children.foreach((actorRef) => {
         futureList ::= (actorRef ? CmdStatus)
           .map( (s: Any) => (actorRef.path.name, s.toString()) )
           .recover({ case ex:TimeoutException => (actorRef.path.name, ex.getLocalizedMessage) })
       })
-
       Future.sequence(futureList).map( _.map(_.productIterator.toList.mkString(":\n\t")).mkString("\n") ).andThen({
         case scala.util.Success(statusString) => {
-          self ? CmdGetOrStart(ActorMqtt.ActorName) andThen {
-            case scala.util.Success(actor: ActorRef) =>
-              actor ! CmdMqttPublish(SensorwebEventStatus, "public", statusString + f"${System.currentTimeMillis / 1000}%s", false)
-          }
+          logger.info(s"$statusString - ${System.currentTimeMillis / 1000}")
         }
         case scala.util.Failure(ex) => {
           logger.warn("Something went wrong.", ex)
@@ -169,7 +171,7 @@ class ActorSupervisor(config: Configuration) extends Actor with MyLogger {
     } //CmdStatus
     case default => {
       val sender = context.sender()
-      logger.warn(f"Received unknown command '${default}%s' from '${sender}%s'")
+      logger.warn(f"Received unknown message '${default}%s' from '${sender}%s'")
     }
   }
 

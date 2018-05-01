@@ -58,7 +58,6 @@ object Global extends GlobalSettings with MyLogger {
       throw new PlayException(s"Configured uplink node application.config does not equal uplink node in database.", s"Configured uplink node application.config does not equal uplink node in database.")
     }
 
-
     logger.info("Creating Supervisor Actor...")
     val actorSupervisor = Akka.system().actorOf(ActorSupervisor.props(subConfig), ActorSupervisor.ActorName)
     val actorScheduleTimeout = subConfig.getInt("supervisor.actorschedule.timeout").getOrElse(45)
@@ -94,15 +93,9 @@ object Global extends GlobalSettings with MyLogger {
       scheduleActorStart(WizActor.ActorName)
     }
 
-    /*
-        if (play.Play.application.configuration.getString("sensorweb.moxa.spa.enabled").equalsIgnoreCase("true")) {
-          val cancelSpaStart = Akka.system.scheduler.scheduleOnce(5.seconds, actorSupervisor, SpaActorCommand(1, "start"))
-        }
-
-        if (play.Play.application.configuration.getString("sensorweb.moxa.tarom.enabled").equalsIgnoreCase("true")) {
-          val cancelTaromStart = Akka.system.scheduler.scheduleOnce(5.seconds, actorSupervisor, TaromActorCommand(1, "start"))
-        }
-    */
+    if (subConfig.getBoolean("tarom.enabled").getOrElse(false)) {
+      scheduleActorStart(ActorTarom.ActorName)
+    }
   }
 
   override def onStop(application: play.api.Application) {
