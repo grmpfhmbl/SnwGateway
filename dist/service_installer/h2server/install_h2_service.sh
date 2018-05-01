@@ -38,8 +38,8 @@ envsubst '$VERSION $BINARY_DIR $BACKUP_DIR' < backup_h2.sh > "$BINARY_DIR/backup
 envsubst '$VERSION $BINARY_DIR' < restore_h2.sh > "$BINARY_DIR/restore_h2.sh"
 envsubst '$VERSION $BINARY_DIR' < runscript_h2.sh > "$BINARY_DIR/runscript_h2.sh"
 
-adduser $USER --system --group --disabled-login --home "$INSTALL_DIR"
-chown -R $USER:$USER "$INSTALL_DIR"
+adduser ${USER} --system --group --disabled-login --home "$INSTALL_DIR"
+chown -R ${USER}:${USER} "$INSTALL_DIR"
 
 systemctl enable "$SERVICE_UNIT"
 systemctl status "$SERVICE_UNIT"

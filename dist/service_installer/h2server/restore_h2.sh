@@ -2,7 +2,7 @@
 
 TIME="$(/bin/date +%Y-%m-%dT%H:%M:%S%z)"
 USER=""
-PWD=""
+PASSWORD=""
 
 if [ -z ${1+x} ]; then
     echo "File from which to restore not given."
@@ -31,10 +31,10 @@ if [ -z ${H2_PWD+x} ]; then
     echo "Env variable H2_PWD not set. Using empty password."
 else
     echo "Password: <set>"
-    PWD="-password ${H2_PWD}"
+    PASSWORD="-password ${H2_PWD}"
 fi
 
 read -p "Press any key to continue... CTRL-C to cancel." -n1 -s
 echo ""
 
-/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.RunScript -user $USER -password $PWD -script "$1" -options compression zip -url "$H2_URL"
+/usr/bin/java -cp "$BINARY_DIR/h2-$VERSION.jar" org.h2.tools.RunScript -user ${USER} -password $PASSWORD -script "$1" -options compression zip -url "$H2_URL"
