@@ -417,8 +417,8 @@ class SosActor extends Actor with MyLogger {
 
     logger.debug(s"Telling $mqttActorSel CmdMqttPublish() ObservationID: ${observation.idsensormeasurement}")
     mqttActorSel ! CmdMqttPublish(msgType = SensorwebObservations,
-      topic = urlify(s"${sensorNode.name}"),
-      body = s"$measIsoTime;p${sensorType.sensid}_${sensorType.phenomenon};${observation.calcvalue};${sensorType.unit}",
+      topic = urlify(s"${sensorNode.name}/p${sensorType.sensid}_${sensorType.phenomenon}"),
+      body = s"$measIsoTime;${observation.calcvalue};${sensorType.unit}",
       retain = false)
 
     //TODO mark measurements as failed when error!

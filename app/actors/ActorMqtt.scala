@@ -74,8 +74,9 @@ object SensorwebEventStatus extends MqttPrefixes {
   val topic = "event/status"
 }
 
+//TODO make these configurable from application.conf
 object SensorwebObservations extends MqttPrefixes {
-  val topic = "observations"
+  val topic = "zgis/observations"
 }
 
 
@@ -99,7 +100,7 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
     s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
   lazy val procexecActorSel: ActorSelection = context.system.actorSelection(
     s"/user/${ActorSupervisor.ActorName}/${ProcessExecActor.ActorName}")
-  //read config
+  //Configurations
   val MQTT_HOST: String = config.getString("host").getOrElse("localhost")
   val MQTT_PORT: Int = config.getInt("port").getOrElse(1883)
   val MQTT_CLIENTID: String = config.getString("clientid").getOrElse("gateway")
@@ -108,6 +109,7 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
   val TOPIC_SUBSCRIBE_PREFIXES: mutable.Buffer[String] = config.getStringList("topic.prefix.subscribe").get.asScala
   val TOPIC_PUBLISH_PREFIX: String = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
   val MQTT_CONNECT_RETRY_TIMEOUT: Int = config.getInt("connectRetryTimeout").getOrElse(60)
+
   var managerRef: Option[ActorRef] = None
   private var lastMessageId = 1
   private var connectAttempts = 0; //number of consecutive connection attempts
