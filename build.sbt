@@ -9,6 +9,8 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
 scalaVersion := "2.11.6"
 
+val akkaSerialVersion = "4.1.2"
+
 libraryDependencies ++= Seq(
   jdbc,
   anorm,
@@ -20,8 +22,9 @@ libraryDependencies ++= Seq(
   "xalan" % "serializer" % "2.7.2", //fixes resovler bug in IDEA14 http://stackoverflow.com/questions/26633298/sbt-xalanserializer-error-in-intellij
   "net.sigusr" %% "scala-mqtt-client" % "0.6.0",
   "com.github.jodersky" %% "flow" % "2.2.0",
-  "com.github.nscala-time" %% "nscala-time" % "2.0.0"
+  "com.github.nscala-time" %% "nscala-time" % "2.0.0",
   //"mysql" % "mysql-connector-java" % "5.1.6"
+  "ch.jodersky" %% "akka-serial-core" % akkaSerialVersion
 )
 
 libraryDependencies ++= Seq(
