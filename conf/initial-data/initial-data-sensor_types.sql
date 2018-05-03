@@ -41,6 +41,7 @@ INSERT INTO SENSORTYPES VALUES(64, 169, 'Temperature PT1000'               ,  0.
 
 ------------------------------------------------------------------------------
 -- SPA
+-- SR - Why the fuck does 2 have lower IDs than 1?!?!
 INSERT INTO SENSORTYPES VALUES(24, 304, 'SPA ice content 2'                ,  0.00, 'Ice content'          , '%'     , 'Sommer Sensor 2 Ice content');
 INSERT INTO SENSORTYPES VALUES(25, 305, 'SPA water content 2'              ,  0.00, 'Water content'        , '%'     , 'Sommer Sensor 2 Water content');
 INSERT INTO SENSORTYPES VALUES(26, 306, 'SPA snow density 2'               ,  0.00, 'Snow density'         , 'kg/m^3', 'Sommer Sensor 2 Snow density');
@@ -51,6 +52,7 @@ INSERT INTO SENSORTYPES VALUES(30, 300, 'SPA ice content 1'                ,  0.
 INSERT INTO SENSORTYPES VALUES(31, 301, 'SPA water content 1'              ,  0.00, 'Water content'        , '%'     , 'Sommer Sensor 1 Water content');
 INSERT INTO SENSORTYPES VALUES(32, 302, 'SPA snow density 1'               ,  0.00, 'Snow density'         , 'kg/m^3', 'Sommer Sensor 1 Snow density');
 INSERT INTO SENSORTYPES VALUES(33, 303, 'SPA SWE 1'                        ,  0.00, 'Snow water equivalent', 'mm'    , 'Sommer Sensor 1 SWE');
+
 
 ------------------------------------------------------------------------------
 -- Z_GAS board

@@ -9,7 +9,11 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
 scalaVersion := "2.11.6"
 
-val akkaSerialVersion = "4.1.2"
+//FIXME 4.0.0 is the latest version that works with Play 2.3.x (Akka 2.4.x -> 2.5.x) Change to latest after Play update!
+//the native libs jar 4.1.2 works (no changes between 4.0.0 and 4.1.2.), because it
+//the lib for the older Raspberry Pi.
+
+val akkaSerialVersion = "4.0.0"
 
 libraryDependencies ++= Seq(
   jdbc,

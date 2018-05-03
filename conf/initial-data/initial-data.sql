@@ -26,6 +26,8 @@ INSERT INTO SENSORNODES VALUES(12, '0013A20040BA23C7', 'Hydro09'      , 'Customb
 -- INSERT INTO SENSORNODES VALUES(16, '0013A20040B3159A', 'Router01'     , 'ZigBEE-Router Meindl'                       , 47.817183, 13.153886, 724.000000);
 -- INSERT INTO SENSORNODES VALUES(17, '0013A2004061649B', 'Router02'     , 'ZigBEE-Router Nockstein'                    , 47.815598, 13.120290, 954.000000);
 
+INSERT INTO SENSORNODES VALUES(18, '0000111122223333', 'TaromMeindl'  , 'Steca Tarom @Meindlbauer'                   , 47.817471, 13.154540, 724.000000);
+
 --LAB & test
 -- INSERT INTO SENSORNODES VALUES( 1, '0013A20040BA23BE', 'LabGateway'   , 'Gateway Lab Station'                        ,         0,         0,          0);
 INSERT INTO SENSORNODES VALUES(14, '0013A20040616484', 'HydroLab01'   , 'Customboard (Hydroboard) at Lab-Station 01' , 47.823377, 13.039382, 417.000000);

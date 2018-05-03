@@ -20,6 +20,7 @@ package actors
 import scala.util.Try
 import play.api.Logger
 import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneId}
 
 import actors.ActorSupervisor.CmdStatus
 import org.joda.time.DateTime
@@ -27,11 +28,17 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import akka.actor.Actor
 import models._
 
+case class InsertMeasurementMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
+
+@Deprecated
 case class TaromDataMessage(fieldid: Int, value: String)
+@Deprecated
 case class SpaDataMessage(value: String)
+@Deprecated
 case class XBeeDataMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 @Deprecated
 case class LogDataMessage(loglevel: String, logtext: String)
+@Deprecated
 case class WizDataMessage(sid: Int, ts: Timestamp, data: Double)
 
 /**
@@ -80,8 +87,16 @@ class DbActor extends Actor {
     // I gues we'll need message type for all the different "Drivers
     case XBeeDataMessage(addr, sid, ts, raw, data) => {
       logger.debug(s"got XBee Data: $addr, $sid, $ts, $raw, $data")
-      insertXBeeMeasurement(addr, sid, ts, raw, data)
+      //TODO waspmotes deliver wrong timestamps, here workaround take actual system timesamp
+      val systemTime: Timestamp = Timestamp.valueOf(LocalDateTime.now(ZoneId.of("UTC")))
+      insertMeasurement(addr, sid, ts, raw, data)
     }
+
+    case InsertMeasurementMessage(addr, sid, ts, raw, data) => {
+      logger.debug(s"Insert new measurement: $addr, $sid, $ts, $raw, $data")
+      insertMeasurement(addr, sid, ts, raw, data)
+    }
+
     // big logging test
     case LogDataMessage(loglevel, logtext) => {
       // later we could match on the loglevel thing and do more logic
@@ -264,37 +279,32 @@ class DbActor extends Actor {
     }
   }
 
-  def insertXBeeMeasurement(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double): Unit = {
+  def insertMeasurement(extendedAddress: String, sensorId: Int, ts: Timestamp, raw: Double, data: Double): Unit = {
     // eventuell noch some data scrubbing?
-    val nodes = SensorNode.getSensorNodeByExtendedAddress(addr)
-    val types = SensorType.getSensorTypeBySensID(sid.toLong)
+    val nodes = SensorNode.getSensorNodeByExtendedAddress(extendedAddress)
+    val types = SensorType.getSensorTypeBySensID(sensorId.toLong)
     val nodeslen = nodes.size
     val typeslen = types.size
 
     if (nodeslen <= 0) {
-      logger.error("Could not find Sensor Node: " + addr)
+      logger.error("Could not find Sensor Node: " + extendedAddress)
     }
     else if (nodeslen > 1) {
-      logger.error("SensorNode is not unique: " + addr)
+      logger.error("SensorNode is not unique: " + extendedAddress)
     }
     else if (typeslen < 0) {
-      logger.error("Could not find Sensor Type: " + sid)
+      logger.error("Could not find Sensor Type: " + sensorId)
     }
     else if (typeslen > 1) {
-      logger.error("SensorType is not unique: " + sid)
+      logger.error("SensorType is not unique: " + sensorId)
     }
     else {
         // this gives an exception, when the list is empty!
       val senstype = types.head
       val node = nodes.head
 
-      import java.util.Date
-
-      //TODO waspmotes deliver wrong timestamps, here workaround take actual system timesamp
-      val systemTime: Timestamp = new Timestamp(new Date().getTime())
-
       // val meas = SensorMeasurement(-1, ts, 0.0, 0.0, 0.0, raw, data, false, -1, node.idsensornode, senstype.idsensortype)
-      val meas = SensorMeasurement(-1, systemTime, 0.0, 0.0, 0.0, raw, data, sostransmitted = false, -1, node.idsensornode, senstype.idsensortype)
+      val meas = SensorMeasurement(-1, ts, 0.0, 0.0, 0.0, raw, data, sostransmitted = false, -1, node.idsensornode, senstype.idsensortype)
       // here inserted!
       val retval = SensorMeasurement.insertNoID(meas)
     }

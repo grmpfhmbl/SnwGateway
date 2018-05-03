@@ -10,7 +10,7 @@
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- rollover daily -->
-            <fileNamePattern>${application.home}/logs/inDev.application.%d{yyyy-MM-dd_HH-mm}.log</fileNamePattern>
+            <fileNamePattern>${application.home}/logs/inDev.application.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>90</maxHistory>
             <totalSizeCap>2GB</totalSizeCap>
         </rollingPolicy>
@@ -27,21 +27,21 @@
         </encoder>
     </appender>
 
-    <logger name="play" level="DEBUG"/>
-    <logger name="application" level="DEBUG"/>
-    <logger name="akka" level="DEBUG"/>
+    <logger name="play" level="INFO"/>
+    <logger name="application" level="INFO"/>
+    <logger name="akka" level="INFO"/>
 
-    <logger name="application.Global" level="DEBUG"/>
-    <logger name="application.actors" level="DEBUG"/>
+    <!--<logger name="application.Global" level="INFO"/>-->
 
+    <!--<logger name="application.actors" level="INFO"/>-->
     <!--<logger name="application.actors.SosActor" level="INFO"/>-->
     <!--<logger name="application.actors.WizActor" level="INFO"/>-->
     <!--<logger name="application.actors.XBeeActor" level="INFO"/>-->
     <!--<logger name="application.actors.ActorMqtt" level="DEBUG"/>-->
     <!--<logger name="application.actors.ActorSupervisor" level="INFO"/>-->
+    <logger name="application.actors.ActorTarom" level="DEBUG"/>
 
-    <logger name="application.models" level="DEBUG"/>
-
+    <!--<logger name="application.models" level="INFO"/>-->
     <!--<logger name="application.utils" level="INFO"/>-->
     <!--<logger name="application.utils.WaspProcess" level="INFO"/>-->
     <!--<logger name="application.utils.WaspComm" level="INFO"/>-->
