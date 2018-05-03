@@ -24,11 +24,13 @@ import akka.io.IO
 import akka.util.ByteString
 import utils.SpaCommLegacy
 
+@Deprecated
 object SpaActorLegacy {
   def props(remote: InetSocketAddress, replies: ActorRef) =
     Props(classOf[SpaActorLegacy], remote, replies)
 }
 
+@Deprecated
 class SpaActorLegacy(remote: InetSocketAddress, listener: ActorRef) extends Actor {
 
   // doch wieder irgendwie singleton pattern machen,

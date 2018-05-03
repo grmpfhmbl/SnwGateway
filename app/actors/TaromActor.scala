@@ -36,7 +36,6 @@ object TaromActor {
 // in Global.scala setzen bei instanzierung
 @Deprecated
 class TaromActor(remote: InetSocketAddress, listener: ActorRef) extends Actor {
-
   import context.system
 
   // implicitly used by IO(Tcp)

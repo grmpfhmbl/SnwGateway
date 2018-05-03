@@ -29,12 +29,14 @@ import akka.actor.Scheduler
 /**
  * this thing should go into test package soon, deactivate in Global.scala if you need to
  */
+@deprecated
 object MoxaMockActor {
   val ACTOR_NAME = "moxa-mock"
   def props(endpoint: InetSocketAddress, replies: ActorRef) =
     Props(classOf[MoxaMockActor], endpoint)
 }
 
+@deprecated
 class MoxaMockActor(endpoint: InetSocketAddress) extends Actor {
 
   import context.system
@@ -91,12 +93,14 @@ class MoxaMockActor(endpoint: InetSocketAddress) extends Actor {
   }
 }
 
+@deprecated
 object TcpEchoConnectionHandler {
 
   def props(remote: InetSocketAddress, connection: ActorRef): Props =
     Props(new TcpEchoConnectionHandler(remote, connection))
 }
 
+@deprecated
 class TcpEchoConnectionHandler(remote: InetSocketAddress, connection: ActorRef) extends Actor {
 
   import scala.language.postfixOps

@@ -29,13 +29,12 @@ import akka.actor.Actor
 import models._
 
 case class InsertMeasurementMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
+case class XBeeDataMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 
 @Deprecated
 case class TaromDataMessage(fieldid: Int, value: String)
 @Deprecated
 case class SpaDataMessage(value: String)
-@Deprecated
-case class XBeeDataMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 @Deprecated
 case class LogDataMessage(loglevel: String, logtext: String)
 @Deprecated
@@ -310,6 +309,7 @@ class DbActor extends Actor {
     }
   }
 
+  @deprecated
   def createInsertLogData(loglevel: String, logtext: String): Unit = {
     val datevalue = new DateTime
     // NODE ID the local gateway service :-p which is the network
@@ -322,6 +322,7 @@ class DbActor extends Actor {
   }
 
   def insertWizMeasurement(sid: Int, ts: Timestamp, data: Double): Unit = {
+    //FIXME WIZ Actor has to find it's ID (nodeId) by itself! Should be configured in the application.conf via extendedAddress / serialNumber
     if (!SensorMeasurement.existsTimestamp(15, sid, ts)) {
       val meas = SensorMeasurement(-1, ts, 0.0, 0.0, 0.0, data, data, sostransmitted = false, -1, 15, sid)
       SensorMeasurement.insertNoID(meas)
