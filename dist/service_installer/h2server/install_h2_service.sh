@@ -43,3 +43,5 @@ chown -R ${USER}:${USER} "$INSTALL_DIR"
 
 systemctl enable "$SERVICE_UNIT"
 systemctl status "$SERVICE_UNIT"
+
+chmod +x "$INSTALL_DIR/bin/*.sh"

@@ -31,13 +31,13 @@ import models._
 case class InsertMeasurementMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 case class XBeeDataMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 
-@Deprecated
+@deprecated
 case class TaromDataMessage(fieldid: Int, value: String)
-@Deprecated
+@deprecated
 case class SpaDataMessage(value: String)
-@Deprecated
+@deprecated
 case class LogDataMessage(loglevel: String, logtext: String)
-@Deprecated
+@deprecated
 case class WizDataMessage(sid: Int, ts: Timestamp, data: Double)
 
 /**
@@ -118,10 +118,12 @@ class DbActor extends Actor {
     }
   }
 
+  @deprecated
   def preprocessTaromRubbish(value: String) = {
     parseAndInsertTaromString("1; " + value)
   }
 
+  @deprecated
   def parseAndInsertTaromString(value: String) = {
 
     val parseWithIndex = value.split(";").zipWithIndex
@@ -197,6 +199,7 @@ class DbActor extends Actor {
     }
   }
 
+  @deprecated
   def createInsertMeasurement(date: String, time: String, fieldid: Long, value: String) {
 
     // wenn das net funzt, dann pfui -> "#" is sortof NoData
@@ -211,12 +214,12 @@ class DbActor extends Actor {
       val meas = SensorMeasurement(-1, datevalue.toDate(), 0.0, 0.0, 0.0, parsedValue, parsedValue, sostransmitted = false, -1, 15, fieldid)
 
       // here inserted!
-      val retval = SensorMeasurement.insertNoID(meas)
+      val retval = SensorMeasurement.insertWithoutId(meas)
     }
   }
 
+  @deprecated
   def parseDate(date: String, time: String): Try[DateTime] = {
-
     Try(format.parseDateTime(s"$date $time"))
   }
 
@@ -233,43 +236,43 @@ class DbActor extends Actor {
         case 304 => {
           val fieldid = 24
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case 305 => {
           val fieldid = 25
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case 306 => {
           val fieldid = 26
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
 
         }
         case 307 => {
           val fieldid = 27
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case 316 => {
           val fieldid = 28
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case 318 => {
           val fieldid = 29
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case 300 => {
           val fieldid = 30
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case 302 => {
           val fieldid = 32
           val meas = SensorMeasurement(-1, now.toDate(), 0.0, 0.0, 0.0, spam.rawdata, spam.data, sostransmitted = false, -1, 3, fieldid)
-          SensorMeasurement.insertNoID(meas)
+          SensorMeasurement.insertWithoutId(meas)
         }
         case _ => {
           logger.debug("unhandled SPA fieldid sensid")
@@ -302,10 +305,8 @@ class DbActor extends Actor {
       val senstype = types.head
       val node = nodes.head
 
-      // val meas = SensorMeasurement(-1, ts, 0.0, 0.0, 0.0, raw, data, false, -1, node.idsensornode, senstype.idsensortype)
       val meas = SensorMeasurement(-1, ts, 0.0, 0.0, 0.0, raw, data, sostransmitted = false, -1, node.idsensornode, senstype.idsensortype)
-      // here inserted!
-      val retval = SensorMeasurement.insertNoID(meas)
+      val retval = SensorMeasurement.insertWithoutId(meas)
     }
   }
 
@@ -325,7 +326,7 @@ class DbActor extends Actor {
     //FIXME WIZ Actor has to find it's ID (nodeId) by itself! Should be configured in the application.conf via extendedAddress / serialNumber
     if (!SensorMeasurement.existsTimestamp(15, sid, ts)) {
       val meas = SensorMeasurement(-1, ts, 0.0, 0.0, 0.0, data, data, sostransmitted = false, -1, 15, sid)
-      SensorMeasurement.insertNoID(meas)
+      SensorMeasurement.insertWithoutId(meas)
     }
     else {
       logger.warn(s"WIZ measurement already in databse for timestamp: ${ts}")

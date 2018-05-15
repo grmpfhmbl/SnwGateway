@@ -204,8 +204,8 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
     dataBufferString = splitBuffer._2.drop(1) //splitAt() leaves the \n at the beginning and we don't want it.
     val linesToProcess = splitBuffer._1.split(EOL)
 
-    logger.trace(s"Data to process:\n'${splitBuffer._1}'")
-    logger.trace(s"Remaining buffer:\n'${dataBufferString}'")
+    logger.debug(s"Data to process:\n'${splitBuffer._1}'")
+    logger.debug(s"Remaining buffer:\n'${dataBufferString}'")
     logger.info(s"Got ${linesToProcess.length} complete lines of data. ${dataBufferString.length}" +
       s"bytes remaining in buffer.")
 
@@ -221,7 +221,7 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
     }
 
     logger.debug(s"Processing $line")
-    if (!line.matches("^1;(?:[^;]+?;){25}[0-9A-F]{4}$")) {
+    if (!line.matches("^1;(?:[^;]+?;){25}[0-9A-F]{4}")) {
       logger.warn(s"Could not process $line because of invalid format. Ignoring.")
     }
     //TODO CRC Check

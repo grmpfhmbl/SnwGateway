@@ -120,9 +120,9 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
   }
 
   private def connect(): Unit = {
-    logger.debug(s"Started MqttManager as $managerRef")
     this.connectAttempts += 1;
     managerRef = Some(context.actorOf(Manager.props(new InetSocketAddress(MQTT_HOST, MQTT_PORT))))
+    logger.info(s"Started MqttManager as $managerRef")
 
     managerRef.get ! Connect(
       clientId = MQTT_CLIENTID,

@@ -146,7 +146,12 @@ object SensorMeasurement extends Object with MyLogger {
       addedRows == 1
     }
 
-  def insertNoID(sensorMeasurement: SensorMeasurement): Boolean =
+  /** inserts measurement without (autogenerating) ID
+    *
+    * @param sensorMeasurement
+    * @return
+    */
+  def insertWithoutId(sensorMeasurement: SensorMeasurement): Boolean =
     DB.withConnection { implicit connection =>
       val addedRows = SQL("""insert into sensormeasurements
           (meastime, latitude, longitude, altitude, rawvalue, calcvalue,
