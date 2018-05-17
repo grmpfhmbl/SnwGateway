@@ -192,8 +192,7 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
     */
   private def queueNewData(data: ByteString) = {
     //TODO maybe instead of all this string-decode / regex magic just itereate over the ByteString and look for 0x10
-    val EOL = "\\r?\\n"
-    val strData = data.decodeString(StandardCharsets.US_ASCII.name())
+    val strData = data.decodeString(StandardCharsets.US_ASCII.name()).replaceAll("\r", "")
     logger.debug(s"Received ${data.length} bytes of data.")
     logger.trace(s"Decoded to:\n'$strData'")
     dataBufferString += strData;
@@ -202,7 +201,7 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
     val lastEOL = dataBufferString.lastIndexOf("\n")
     val splitBuffer = dataBufferString.splitAt(lastEOL)
     dataBufferString = splitBuffer._2.drop(1) //splitAt() leaves the \n at the beginning and we don't want it.
-    val linesToProcess = splitBuffer._1.split(EOL)
+    val linesToProcess = splitBuffer._1.split("\n")
 
     logger.debug(s"Data to process:\n'${splitBuffer._1}'")
     logger.debug(s"Remaining buffer:\n'${dataBufferString}'")
@@ -220,8 +219,8 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
       dbActorSel ! XBeeDataMessage(serialNumber.get, sensId, Timestamp.valueOf(timestamp), values(sensId - 330).toDouble, values(sensId - 330).toDouble)
     }
 
-    logger.debug(s"Processing $line")
-    if (!line.matches("^1;(?:[^;]+?;){25}[0-9A-F]{4}")) {
+    //logger.debug(s"Processing $line")
+    if (!line.matches("^1;(?:[^;]+?;){25}[0-9A-F]{4}$")) {
       logger.warn(s"Could not process $line because of invalid format. Ignoring.")
     }
     //TODO CRC Check
@@ -231,8 +230,6 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
       val values = line.split(";")
       try {
         val timestamp = LocalDateTime.parse(values(1) + " " + values(2), DATE_FORMAT)
-        logger.debug(s"Timestamp: $timestamp")
-
         sendMessage(ActorTarom.SENSID_BAT_VOLTAGE, timestamp, values)
         sendMessage(ActorTarom.SENSID_MODULE_VOLT_1, timestamp, values)
         sendMessage(ActorTarom.SENSID_STATE_OF_CHARGE, timestamp, values)
