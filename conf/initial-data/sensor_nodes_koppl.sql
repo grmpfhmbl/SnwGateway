@@ -41,3 +41,8 @@ INSERT INTO SENSORNODES VALUES(23, 'IQ1347005'         , 'SontekIQPlainf', 'Sont
 INSERT INTO SENSORNODES VALUES(14, '0013A20040616484', 'HydroLab01'   , 'Customboard (Hydroboard) at Lab-Station 01' , 47.823377, 13.039382, 417.000000);
 INSERT INTO SENSORNODES VALUES(22, '000011112222333355', 'TaromMockup'  , 'Steca Tarom mockup for testing'           , 47.823377, 13.039382, 417.000000);
 INSERT INTO SENSORNODES VALUES(15, '0012100000000002', 'WIZTest01'    , 'Water Insitu Analyzer - Mock and Testing'   , 47.823377, 13.039382, 417.000000);
+
+
+--- BROKEN XBEEs
+--- TRY https://www.youtube.com/watch?v=KamcI1wjNQ8
+-- 0013A20040616498
