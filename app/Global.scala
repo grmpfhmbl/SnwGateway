@@ -96,6 +96,10 @@ object Global extends GlobalSettings with MyLogger {
     if (subConfig.getBoolean("tarom.enabled").getOrElse(false)) {
       scheduleActorStart(ActorTarom.ActorName)
     }
+
+    if (subConfig.getBoolean("sontekIq.enabled").getOrElse(false)) {
+      scheduleActorStart(ActorSontekIq.ActorName)
+    }
   }
 
   override def onStop(application: play.api.Application) {

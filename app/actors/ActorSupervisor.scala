@@ -128,6 +128,12 @@ class ActorSupervisor(config: Configuration) extends Actor with MyLogger {
               val actor = context.actorOf(props, ActorTarom.ActorName)
               sender ! akka.actor.Status.Success(actor)
             }
+            case ActorSontekIq.ActorName => {
+              //FIXME SREI errorhandling!!!
+              val props = ActorSontekIq.props(config.getConfig("sontekIq").get)
+              val actor = context.actorOf(props, ActorSontekIq.ActorName)
+              sender ! akka.actor.Status.Success(actor)
+            }
             case ProcessExecActor.ActorName => {
               //FIXME SREI errorhandling!!!
               val actor = context.actorOf(Props[ProcessExecActor], ProcessExecActor.ActorName)
