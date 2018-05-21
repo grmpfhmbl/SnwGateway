@@ -185,5 +185,4 @@ class MqttSubmitTaskResp(override val messageUUID: Option[UUID],
     json = json +("status", JsString(status))
     return json
   }
-
 }

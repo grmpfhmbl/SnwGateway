@@ -39,9 +39,10 @@
     <!--<logger name="application.actors.XBeeActor" level="INFO"/>-->
     <!--<logger name="application.actors.ActorMqtt" level="DEBUG"/>-->
     <!--<logger name="application.actors.ActorSupervisor" level="INFO"/>-->
-    <logger name="application.actors.ActorTarom" level="DEBUG"/>
+    <!--<logger name="application.actors.ActorTarom" level="DEBUG"/>-->
 
     <!--<logger name="application.models" level="INFO"/>-->
+
     <!--<logger name="application.utils" level="INFO"/>-->
     <!--<logger name="application.utils.WaspProcess" level="INFO"/>-->
     <!--<logger name="application.utils.WaspComm" level="INFO"/>-->

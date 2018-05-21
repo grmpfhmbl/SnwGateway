@@ -31,14 +31,10 @@ import models._
 case class InsertMeasurementMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 case class XBeeDataMessage(addr: String, sid: Int, ts: Timestamp, raw: Double, data: Double)
 
-@deprecated
-case class TaromDataMessage(fieldid: Int, value: String)
-@deprecated
-case class SpaDataMessage(value: String)
-@deprecated
-case class LogDataMessage(loglevel: String, logtext: String)
-@deprecated
-case class WizDataMessage(sid: Int, ts: Timestamp, data: Double)
+@deprecated case class TaromDataMessage(fieldid: Int, value: String)
+@deprecated case class SpaDataMessage(value: String)
+@deprecated case class LogDataMessage(loglevel: String, logtext: String)
+@deprecated case class WizDataMessage(sid: Int, ts: Timestamp, data: Double)
 
 /**
  * String addr = sensDataFrame.getAddr64asString();

@@ -46,7 +46,7 @@ public class SensorDescription {
     /**
      * minimum constructor for NETWORK sensorml per default
      * 
-     * @param uniqueID
+     * @param networkID
      */
     public SensorDescription(String networkID) {
         super();
@@ -96,7 +96,7 @@ public class SensorDescription {
     }
 
     /**
-     * efault constructor for predefined PLATFORM sensorml structure with
+     * default constructor for predefined PLATFORM sensorml structure with
      * flexible phen with obsType (TRUTH, MEASUREMENT, COUNT, TEXT, CATEGORY)
      * 
      * @param platformID
@@ -507,7 +507,7 @@ public class SensorDescription {
     /**
      * an independent group through indicator and location support
      * 
-     * @param independentIndicator
+     * @param independencyIndicator
      * @param uniqueSensorID
      * @param obsProp
      * @param uomCode
@@ -599,11 +599,10 @@ public class SensorDescription {
     /**
      * no location, and an independent group through indicator
      * 
-     * @param independentIndicator
+     * @param independencyIndicator
      * @param uniqueSensorID
      * @param obsProp
      * @param uomCode
-     * @param position
      * @return
      */
     @Deprecated

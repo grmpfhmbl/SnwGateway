@@ -2,8 +2,6 @@
 
     <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel"/>
 
-    <!-- TODO find good rule for rolling. Either weekly or by size? https://logback.qos.ch/manual/appenders.html -->
-
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${application.home}/logs/application.log</file>
         <encoder>
@@ -34,13 +32,14 @@
     <logger name="akka" level="INFO"/>
 
     <!--<logger name="application.Global" level="INFO"/>-->
-    <logger name="application.actors" level="INFO"/>
 
+    <!--<logger name="application.actors" level="INFO"/>-->
     <!--<logger name="application.actors.SosActor" level="INFO"/>-->
     <!--<logger name="application.actors.WizActor" level="INFO"/>-->
     <!--<logger name="application.actors.XBeeActor" level="INFO"/>-->
     <!--<logger name="application.actors.ActorMqtt" level="DEBUG"/>-->
     <!--<logger name="application.actors.ActorSupervisor" level="INFO"/>-->
+    <!--<logger name="application.actors.ActorTarom" level="DEBUG"/>-->
 
     <logger name="application.models" level="WARN"/>
 

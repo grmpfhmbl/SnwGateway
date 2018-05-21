@@ -68,6 +68,7 @@ object SensorNode extends Object with MyLogger {
   def getSensorNodeByExtendedAddress(extendedAddress: String): List[SensorNode] = DB.withConnection {
     implicit connection =>
       {
+        //FIXME SQL INJECTION!
         val query = s"select * from sensornodes where extendedaddress='$extendedAddress' order by name asc"
         logger.debug(query)
         val sensorNodeQueryByExtendedAddress: SqlQuery = SQL(query)
@@ -79,17 +80,29 @@ object SensorNode extends Object with MyLogger {
   def getSensorNodeByName(name: String): List[SensorNode] = DB.withConnection {
     implicit connection =>
       {
+        //FIXME SQL INJECTION!
         val query = s"select * from sensornodes where name='$name' order by name asc"
         val sensorNodeQueryByName: SqlQuery = SQL(query)
         logger.debug(sensorNodeQueryByName.toString())
         sensorNodeQueryByName.as(SensorNodesParser)
       }
+  }
 
+  def getSensorNodeByNameIgnoreCase(name: String): List[SensorNode] = DB.withConnection {
+    implicit connection =>
+      {
+        //FIXME SQL INJECTION!
+        val query = s"select * from sensornodes where lower(name)='${name.toLowerCase}' order by name asc"
+        val sensorNodeQueryByName: SqlQuery = SQL(query)
+        logger.debug(sensorNodeQueryByName.toString())
+        sensorNodeQueryByName.as(SensorNodesParser)
+      }
   }
 
   def getSensorNodeByID(id: Long): SensorNode = DB.withConnection {
     implicit connection =>
       {
+        //FIXME SQL INJECTION!
         val query = s"select * from sensornodes where idsensornode=$id"
         val sensorNodeQueryByName: SqlQuery = SQL(query)
         sensorNodeQueryByName.as(SensorNodesParser).head

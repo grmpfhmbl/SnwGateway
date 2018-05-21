@@ -18,7 +18,9 @@
 package actors
 
 import java.net.InetSocketAddress
-import java.util.UUID
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.{Date, UUID}
 
 import actors.ActorMqtt.{CmdConnect, CmdMqttPublish}
 import actors.ActorSupervisor.CmdStatus
@@ -34,6 +36,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
+import models.{SensorNode, SensorType}
 import play.libs.Akka
 
 import scala.collection.mutable
@@ -86,7 +89,6 @@ object ActorMqtt {
   def props(config: Configuration) = Props(new ActorMqtt(config = config))
 
   case class CmdMqttPublish(msgType: MqttPrefix, topic: String, body: String, retain: Boolean)
-
   case class CmdConnect()
 
 }
@@ -100,6 +102,9 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
     s"/user/${ActorSupervisor.ActorName}/${WizActor.ActorName}")
   lazy val procexecActorSel: ActorSelection = context.system.actorSelection(
     s"/user/${ActorSupervisor.ActorName}/${ProcessExecActor.ActorName}")
+  lazy val dbActorSel: ActorSelection = context.system.actorSelection(
+    s"/user/${ActorSupervisor.ActorName}/${DbActor.ActorName}")
+
   //Configurations
   val MQTT_HOST: String = config.getString("host").getOrElse("localhost")
   val MQTT_PORT: Int = config.getInt("port").getOrElse(1883)
@@ -162,9 +167,8 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       this.connectAttempts = 0
 
       //SREI ok, a little bit of magic. Take the list, make to vector and zip it with a new vector filled with AtMostOnce
-      //TODO SREI we need to think about how to configure this in a more flexible way. At the moment this works, as we're only interested in SPS-Commands
       val zippedVector = TOPIC_SUBSCRIBE_PREFIXES.map((x) => {
-        s"${SpsAll.topic}/${x}/#" //we only subscribe to SPS stuff
+        s"${x}/#"
       }).toVector.zip(Vector.fill(TOPIC_SUBSCRIBE_PREFIXES.length)({
         AtMostOnce
       }))
@@ -482,6 +486,41 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
           //              retain = false)
           //          )
         } //SpsSubmitTask
+        case SensorwebObservations.topic => {
+          logger.debug(s"Received observation: ${topic}: $message")
+
+          try {
+            val uri = topic.split("/").drop(2)
+            assert(uri.length >= 5, "Topic was too short.")
+
+            val messageArray = message.split(";")
+            assert(messageArray.length ==3, "Message did not contain 3 columns")
+
+            val network = uri(1)
+            val gateway = uri(2)
+            val nodeName = uri(3)
+            val sensorName = uri(4)
+
+            val time = messageArray(0)
+            val value = messageArray(1)
+
+            val sensorNode = SensorNode.getSensorNodeByNameIgnoreCase(nodeName)
+            assert(sensorNode.length == 1, s"Could not find SensorNode with name $nodeName or found more than one.")
+
+            //Regex find first 'p(number)_.*' in sensor name. This is the ID.
+            val sensorId = "(?<=^p)\\d+(?=_.*$)".r.findFirstIn(sensorName)
+            assert(sensorId.isDefined, s"Could not parse sensorId from $sensorName")
+
+            val msg = XBeeDataMessage(sensorNode.head.extendedaddress, sensorId.get.toInt, Timestamp.from(Instant.parse(time)), value.toDouble, value.toDouble)
+            logger.debug(msg.toString)
+            dbActorSel ! msg
+          }
+          catch {
+            case ex: IllegalArgumentException => logger.warn("Assertation failed while parsing data message.", ex)
+          }
+
+
+        }
         case _ => {
           logger.debug(s"Message of unknown topic received: [$topic] $message")
         }
