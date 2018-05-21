@@ -3,7 +3,7 @@ package actors
 import java.nio.charset.StandardCharsets
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder, DateTimeParseException}
+import java.time.format.{DateTimeFormatterBuilder, DateTimeParseException}
 import java.time.temporal.ChronoField
 
 import actors.ActorSupervisor.CmdStatus
@@ -15,6 +15,8 @@ import akka.util.ByteString
 import models.SensorNode
 import play.api.Configuration
 import utils.MyLogger
+
+import scala.reflect.runtime.universe._
 
 object ActorTarom {
   val ActorName = "tarom"
@@ -54,9 +56,8 @@ object ActorTarom {
   val SENSID_CRC                     = 356
 }
 
-
+//FIXME make less chatty on INFO
 class ActorTarom(config: Configuration) extends Actor with MyLogger {
-
   private lazy val DATE_FORMAT = new DateTimeFormatterBuilder()
     .appendPattern("yyyy/MM/dd HH:mm")
     .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
@@ -69,6 +70,7 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
   private lazy val readFrom = config.getString("readfrom").getOrElse("serial")
   assert(readFrom.trim().equals("serial") || readFrom.trim.equals("tcp"),
     s"tarom.readfrom must either be 'serial' or 'tcp' but was $readFrom")
+
   private lazy val serialPort = config.getString("serial.port").getOrElse("dev/ttyUSB0")
   private lazy val serialSettings = SerialSettings(
     baud = config.getInt("serial.baud").getOrElse(9600),
@@ -200,7 +202,7 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
 
     val lastEOL = dataBufferString.lastIndexOf("\n")
     val splitBuffer = dataBufferString.splitAt(lastEOL)
-    dataBufferString = splitBuffer._2.drop(1) //splitAt() leaves the \n at the beginning and we don't want it.
+    dataBufferString = splitBuffer._2.replaceAll("\r?\n", "") //splitAt() leaves the \n at the beginning and we don't want it.
     val linesToProcess = splitBuffer._1.split("\n")
 
     logger.debug(s"Data to process:\n'${splitBuffer._1}'")
