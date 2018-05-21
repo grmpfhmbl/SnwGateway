@@ -163,9 +163,7 @@ class WizActor(config: Configuration) extends Actor with MyLogger {
   override def preStart() = {
     logger.info(s"WizActor started as '${self.path }'")
     //TODO SREI figure out, how to make sure, this actor is only started once!
-
     val dbActor = context.actorOf(Props[DbActor], DbActor.ActorName)
-    dbActor ! LogDataMessage(s"INFO from '${WizActor.ActorName }'", s"WizActor started as '${self.path }'")
 
     val port = config.getString("serial.port").getOrElse("/dev/ttyS0")
     val settings = SerialSettings(

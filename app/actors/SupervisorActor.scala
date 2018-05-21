@@ -34,19 +34,14 @@ import scala.io.Source
 import scala.util.Try
 import play.api.Application
 
-@Deprecated
-case class DbActorCommand(fieldid: Int, value: String)
-@Deprecated
-case class TaromActorCommand(fieldid: Int, value: String)
-@Deprecated
-case class SpaActorCommand(fieldid: Int, value: String)
-@Deprecated
-case class XBeeActorCommand(fieldid: Int, value: String)
-@Deprecated
-case class SosActorCommand(fieldid: Int, value: String)
+@deprecated case class DbActorCommand(fieldid: Int, value: String)
+@deprecated case class TaromActorCommand(fieldid: Int, value: String)
+@deprecated case class SpaActorCommand(fieldid: Int, value: String)
+@deprecated case class XBeeActorCommand(fieldid: Int, value: String)
+@deprecated case class SosActorCommand(fieldid: Int, value: String)
 
 // like a central logging daemon, so actors dont necessarily need to write log by themselves
-@Deprecated
+@deprecated("Foo test")
 class SupervisorActor extends Actor {
 
   // TODO hier koennten wir die moxas und taroms etc aus der CONFIG auslesen
