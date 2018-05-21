@@ -3,7 +3,7 @@ import com.typesafe.sbt.packager.universal.Keys.{normalizedName, version}
 
 name := """gateway2"""
 
-version := "1.4-SNAPSHOT"
+version := "1.5"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
