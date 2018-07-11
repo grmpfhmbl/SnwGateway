@@ -205,13 +205,17 @@ class ActorTarom(config: Configuration) extends Actor with MyLogger {
     dataBufferString = splitBuffer._2.replaceAll("\r?\n", "") //splitAt() leaves the \n at the beginning and we don't want it.
     val linesToProcess = splitBuffer._1.split("\n")
 
-    logger.debug(s"Data to process:\n'${splitBuffer._1}'")
-    logger.debug(s"Remaining buffer:\n'${dataBufferString}'")
-    logger.info(s"Got ${linesToProcess.length} complete lines of data. ${dataBufferString.length}" +
+    logger.trace(s"Data to process:\n'${splitBuffer._1}'")
+    logger.trace(s"Remaining buffer:\n'${dataBufferString}'")
+    logger.debug(s"Got ${linesToProcess.length} complete lines of data. ${dataBufferString.length}" +
       s"bytes remaining in buffer.")
 
     //process all complete lines
-    linesToProcess.foreach(line => self ! CmdProcessData(line))
+    linesToProcess.foreach(line =>
+      if (line.length > 1) { //only process lines that actually have stuff in them
+        logger.info("Processing Tarom data packet...")
+        self ! CmdProcessData(line)
+      })
   }
 
   def processLine(line: String): Unit = {

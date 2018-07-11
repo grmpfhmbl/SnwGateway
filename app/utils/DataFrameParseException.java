@@ -21,4 +21,15 @@ public class DataFrameParseException extends Exception {
         super(s);
     }
 
+    /**
+     * Constructs a <code>DataFrameParseException</code> with the
+     * specified detail message and <code>Throwable</code> as cause.
+     *
+     * @param s the detail message.
+     * @param cause cause of exception
+     */
+    public DataFrameParseException(String s, Throwable cause) {
+        super(s, cause);
+    }
+
 }

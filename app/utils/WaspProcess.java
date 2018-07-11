@@ -17,7 +17,6 @@
 
 package utils;
 
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -28,7 +27,6 @@ import actors.DbActor;
 import play.Logger;
 import play.libs.Akka;
 import utils.frameabstraction.*;
-import actors.LogDataMessage;
 import actors.XBeeDataMessage;
 import akka.actor.ActorSelection;
 
@@ -89,44 +87,46 @@ public class WaspProcess implements Runnable {
                 logger.info("SensorDataFrame received");
                 SensorDataFrame sensDataFrame = (SensorDataFrame) df;
 
-                logger.info(sensDataFrame.getAddr64asString());
+                logger.info("Sender: " + sensDataFrame.getAddr64asString());
 
                 Calendar calendar = Calendar.getInstance();
                 java.util.Date now = calendar.getTime();
-                Timestamp currentTS = new java.sql.Timestamp(now.getTime());
-                long diff = Helper.getTimeTifference(currentTS,
-                                                     sensDataFrame.getTimestamp());
-
-                logger.debug("Time difference of " + String.valueOf(diff));
+                Timestamp nowTimestamp = new java.sql.Timestamp(now.getTime());
+                final Timestamp dataframeTimestamp = sensDataFrame.getTimestamp();
+                long diff = Helper.getTimeTifference(nowTimestamp, dataframeTimestamp);
+                logger.debug("Time difference dataframe<>now: " + String.valueOf(diff));
 
                 if (diff > 60000) {
-                    int m[] = SendFrame.updateNodeTime(currentTS);
-                    logger.debug("UpdateTime");
-                    waspcom.SendToWasp(sensDataFrame.getAddr64(), m);
+                    logger.info("Time difference between received data and current time is: " + diff);
+                    logger.info("Sending UpdateTime packet to " + sensDataFrame.getAddr64asString());
+                    int m[] = SendFrame.updateNodeTime(nowTimestamp);
+                    waspcom.sendToWaspmote(sensDataFrame.getAddr64(), m);
                 }
 
                 // ---> Store all sensor data <---
                 for (SensorData sd : sensDataFrame.getSensorData()) {
                     try {
-                        logger.debug("SensorID: "
-                                + Integer.toHexString(sd.getSensorID()));
-                        logger.debug(" - Data: "
-                                + (new DecimalFormat("0.00")).format(sd.getData()));
-                        logger.debug(" - TimeStamp: "
-                                + sensDataFrame.getTimestamp().toString());
-                        // FIXME here be persistence in DB or messagepassing to DB
-                        // actor
-                        // logger.info("XBee WaspProcess here be persistence in DB or messagepassing to DB actor");
+                        logger.debug("SensorID: " + Integer.toHexString(sd.getSensorID()));
+                        logger.debug(" - Data: " + (new DecimalFormat("0.00")).format(sd.getData()));
+                        logger.debug(" - TimeStamp: " + dataframeTimestamp.toString());
 
                         // put into case class in DB actor?
                         String addr = sensDataFrame.getAddr64asString();
                         int sid = sd.getSensorID();
-                        java.sql.Timestamp ts = sensDataFrame.getTimestamp();
+                        java.sql.Timestamp ts;
+
+                        if (diff > 60000) {
+                            logger.warn("Time difference too big, using 'now' as timestamp for database insert");
+                            ts = nowTimestamp;
+                        }
+                        else {
+                            ts = dataframeTimestamp;
+                        }
+
                         Double raw = sd.getRawDataAsDouble();
                         Double data = sd.getData();
 
-                        XBeeDataMessage xbMessage = new XBeeDataMessage(addr, sid,
-                                ts, raw, data);
+                        XBeeDataMessage xbMessage = new XBeeDataMessage(addr, sid, ts, raw, data);
                         dbActor.tell(xbMessage, null);
                     }
                     catch (Exception e) {
@@ -135,64 +135,65 @@ public class WaspProcess implements Runnable {
                 }
             }
             else if (df instanceof TimeStampFrame) {
+                // FIXME this is deprecated - delete code!
                 logger.debug("TimeStampFrame received");
-                TimeStampFrame timStampFrame = (TimeStampFrame) df;
+                TimeStampFrame timeStampFrame = (TimeStampFrame) df;
 
-                logger.debug(timStampFrame.getAddr64asString());
+                logger.debug(timeStampFrame.getAddr64asString());
                 Calendar nowa = Calendar.getInstance();
                 logger.debug(Long.toString(nowa.getTimeInMillis()));
 
-                ArrayList<java.sql.Timestamp> ArrayTs = timStampFrame
-                        .GetTimeStamps();
+                ArrayList<java.sql.Timestamp> ArrayTs = timeStampFrame.GetTimeStamps();
                 // ---> Store all timestamps <---
                 for (java.sql.Timestamp actts : ArrayTs) {
                     logger.debug("Timestamp" + actts.toString());
-                    // FIXME here be persistence in DB or messagepassing to DB
-                    // actor
-                    // logger.info("XBee WaspProcess here be persistence in DB or messagepassing to DB actor");
 
-                    String addr = timStampFrame.getAddr64asString();
+                    String addr = timeStampFrame.getAddr64asString();
                     int sid = 9;
                     Double raw = 0.0;
                     Double data = 0.0;
 
-                    XBeeDataMessage xbMessage = new XBeeDataMessage(addr, sid,
-                            actts, raw, data);
+                    XBeeDataMessage xbMessage = new XBeeDataMessage(addr, sid, actts, raw, data);
                     dbActor.tell(xbMessage, null);
-
                 }
             } else if (df instanceof StatusDataFrame) {
                 logger.info("StatusDataFrame received");
                 StatusDataFrame statDataFrame = (StatusDataFrame) df;
 
-                logger.info(statDataFrame.getAddr64asString());
-                Calendar nowa = Calendar.getInstance();
-                logger.debug("ts: " + Long.toString(nowa.getTimeInMillis()));
+                logger.info("Sender: " + statDataFrame.getAddr64asString());
+
+                Calendar calendar = Calendar.getInstance();
+                java.util.Date now = calendar.getTime();
+                Timestamp nowTimestamp = new java.sql.Timestamp(now.getTime());
+                final Timestamp dataframeTimestamp = statDataFrame.getTimestamp();
+                long diff = Helper.getTimeTifference(nowTimestamp, dataframeTimestamp);
+                logger.debug("Time difference dataframe<>now: " + String.valueOf(diff));
+
 
                 // ---> Store all status infos <---
-                for (StatusData sd : statDataFrame.GetStatusData()) {
+                for (StatusData sd : statDataFrame.getStatusData()) {
                     logger.debug("StatusData ("
                                          + Integer.toHexString(sd.getStatusId()) + ":"
                                          + Integer.toHexString(sd.getStatusValue()) + ")");
-
-                    LogDataMessage logMessage = new LogDataMessage(
-                            "XBee StatusDataFrame", "StatusData "
-                            + Integer.toHexString(sd.getStatusId())
-                            + ":"
-                            + Integer.toHexString(sd.getStatusValue()));
-                    dbActor.tell(logMessage, null);
 
                     if (sd.getStatusId() == (int) 'W') {
 
                         String addr = statDataFrame.getAddr64asString();
                         int sid = 0x0101;
-                        Timestamp ts = statDataFrame.GetTimestamp();
+                        java.sql.Timestamp ts;
+
+                        if (diff > 60000) {
+                            logger.warn("Time difference too big, using 'now' as timestamp for database insert");
+                            ts = nowTimestamp;
+                        }
+                        else {
+                            ts = dataframeTimestamp;
+                        }
+
                         Double raw = (double) sd.getStatusValue();
                         Double data = (double) sd.getStatusValue();
 
-                        XBeeDataMessage xbMessage = new XBeeDataMessage(addr,
-                                                                        sid, ts, raw, data
-                        );
+                        XBeeDataMessage xbMessage = new XBeeDataMessage(addr, sid, ts, raw, data);
                         dbActor.tell(xbMessage, null);
 
                     }

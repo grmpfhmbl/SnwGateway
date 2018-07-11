@@ -208,7 +208,7 @@ class ActorSontekIq(config: Configuration) extends Actor with MyLogger {
 
     val lastEOL = dataBufferString.lastIndexOf("\n")
     val splitBuffer = dataBufferString.splitAt(lastEOL)
-    dataBufferString = splitBuffer._2.drop(1) //splitAt() leaves the \n at the beginning and we don't want it.
+    dataBufferString = splitBuffer._2.replaceAll("\r?\n", "") //splitAt() leaves the \n at the beginning and we don't want it.
     val linesToProcess = splitBuffer._1.split("\n")
 
     logger.debug(s"Data to process:\n'${splitBuffer._1}'")
@@ -217,7 +217,10 @@ class ActorSontekIq(config: Configuration) extends Actor with MyLogger {
       s"bytes remaining in buffer.")
 
     //process all complete lines
-    linesToProcess.foreach(line => self ! CmdProcessData(line))
+    linesToProcess.foreach(line =>
+      if (line.length > 1) { //only process lines that actually have stuff in them
+        self ! CmdProcessData(line)
+      })
   }
 
   def processLine(line: String): Unit = {
@@ -229,6 +232,7 @@ class ActorSontekIq(config: Configuration) extends Actor with MyLogger {
     }
 
     //logger.debug(s"Processing $line")
+
     if (!line.matches("^(-?\\d+(?:\\.\\d+)?,?){34}$")) {
       logger.warn(s"Could not process '$line'. Invalid format. Ignoring.")
     }

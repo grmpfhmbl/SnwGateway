@@ -114,6 +114,7 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
   val TOPIC_SUBSCRIBE_PREFIXES: mutable.Buffer[String] = config.getStringList("topic.prefix.subscribe").get.asScala
   val TOPIC_PUBLISH_PREFIX: String = config.getString("topic.prefix.publish").getOrElse("sensorweb/test")
   val MQTT_CONNECT_RETRY_TIMEOUT: Int = config.getInt("connectRetryTimeout").getOrElse(60)
+  val MQTT_STORE_INCOMING_OBSERVATIONS: Boolean = config.getBoolean("storeIncomingObservations").getOrElse(false)
 
   var managerRef: Option[ActorRef] = None
   private var lastMessageId = 1
@@ -219,6 +220,8 @@ class ActorMqtt(config: Configuration) extends Actor with MyLogger {
       handleDisconnect()
     }
 
+      //FIXME when more than 100 uploads for some reason we disconnect and cant reconnect anmore!
+      //FIXME also handle reconnect more gracefully...
     case Error(kind) => {
       logger.warn(s"Error $kind.")
     }
@@ -489,37 +492,37 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
         case SensorwebObservations.topic => {
           logger.debug(s"Received observation: ${topic}: $message")
 
-          try {
-            val uri = topic.split("/").drop(2)
-            assert(uri.length >= 5, "Topic was too short.")
+          if (MQTT_STORE_INCOMING_OBSERVATIONS) {
+            try {
+              val uri = topic.split("/").drop(2)
+              assert(uri.length >= 5, "Topic was too short.")
 
-            val messageArray = message.split(";")
-            assert(messageArray.length ==3, "Message did not contain 3 columns")
+              val messageArray = message.split(";")
+              assert(messageArray.length ==3, "Message did not contain 3 columns")
 
-            val network = uri(1)
-            val gateway = uri(2)
-            val nodeName = uri(3)
-            val sensorName = uri(4)
+              val network = uri(1)
+              val gateway = uri(2)
+              val nodeName = uri(3)
+              val sensorName = uri(4)
 
-            val time = messageArray(0)
-            val value = messageArray(1)
+              val time = messageArray(0)
+              val value = messageArray(1)
 
-            val sensorNode = SensorNode.getSensorNodeByNameIgnoreCase(nodeName)
-            assert(sensorNode.length == 1, s"Could not find SensorNode with name $nodeName or found more than one.")
+              val sensorNode = SensorNode.getSensorNodeByNameIgnoreCase(nodeName)
+              assert(sensorNode.length == 1, s"Could not find SensorNode with name $nodeName or found more than one.")
 
-            //Regex find first 'p(number)_.*' in sensor name. This is the ID.
-            val sensorId = "(?<=^p)\\d+(?=_.*$)".r.findFirstIn(sensorName)
-            assert(sensorId.isDefined, s"Could not parse sensorId from $sensorName")
+              //Regex find first 'p(number)_.*' in sensor name. This is the ID.
+              val sensorId = "(?<=^p)\\d+(?=_.*$)".r.findFirstIn(sensorName)
+              assert(sensorId.isDefined, s"Could not parse sensorId from $sensorName")
 
-            val msg = XBeeDataMessage(sensorNode.head.extendedaddress, sensorId.get.toInt, Timestamp.from(Instant.parse(time)), value.toDouble, value.toDouble)
-            logger.debug(msg.toString)
-            dbActorSel ! msg
+              val msg = XBeeDataMessage(sensorNode.head.extendedaddress, sensorId.get.toInt, Timestamp.from(Instant.parse(time)), value.toDouble, value.toDouble)
+              logger.debug(msg.toString)
+              dbActorSel ! msg
+            }
+            catch {
+              case ex: IllegalArgumentException => logger.warn("Assertation failed while parsing data message.", ex)
+            }
           }
-          catch {
-            case ex: IllegalArgumentException => logger.warn("Assertation failed while parsing data message.", ex)
-          }
-
-
         }
         case _ => {
           logger.debug(s"Message of unknown topic received: [$topic] $message")
@@ -546,6 +549,7 @@ mosquitto_pub -u mobile -P mobile2014 -t "sps/submitTask/sensorweb/admin/outbox/
     import context.system
     import scala.concurrent.ExecutionContext.Implicits.global
 
+    //FIXME careful here that we only try once at a time! var connecting = true; if (!connecting) ...
     logger.warn(s"Was disconnected. Trying to reconnect in ${MQTT_CONNECT_RETRY_TIMEOUT * connectAttempts} seconds.")
     system.scheduler.scheduleOnce((MQTT_CONNECT_RETRY_TIMEOUT * connectAttempts).seconds, self, CmdConnect)
     context.stop(managerRef.get)

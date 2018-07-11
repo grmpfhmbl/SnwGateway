@@ -14,7 +14,7 @@ LIBRXTXPKG=librxtx-java
 PKG_OK=$(dpkg-query -W --showformat='${Status}\n' ${LIBRXTXPKG}|grep "install ok installed")
 
 echo "This script will install SMART Sensornetwork Gateway to $INSTALL_DIR"
-read -p "Press any key to continue... CTRL-C to cancel.\n" -n1 -s
+read -p "Press any key to continue... CTRL-C to cancel." -n1 -s
 
 if [ ! -f "install_snw_gateway_service.sh" ]; then
     DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

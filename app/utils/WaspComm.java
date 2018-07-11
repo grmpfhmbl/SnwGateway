@@ -83,7 +83,7 @@ public class WaspComm implements AutoCloseable {
      *            data
      * @throws XBeeException
      */
-    public void SendToWasp(XBeeAddress64 addr64, int[] payload)
+    public void sendToWaspmote(XBeeAddress64 addr64, int[] payload)
             throws XBeeException {
         ZNetTxRequest txRequest = new ZNetTxRequest(
                 ZNetTxRequest.NO_RESPONSE_FRAME_ID, addr64,
@@ -107,6 +107,12 @@ public class WaspComm implements AutoCloseable {
             if ((resp.getApiId() == ApiId.ZNET_RX_RESPONSE)
                     || (resp.getApiId() == ApiId.ZNET_EXPLICIT_RX_RESPONSE)
             ) {
+                // BUGFIX for better error handling in caller - we had cases, where the typecast below this IF block failed. ErrorResponse is not a ZNetRxResponse
+                if (resp instanceof com.rapplogic.xbee.api.ErrorResponse) {
+                    ErrorResponse errResp = (ErrorResponse) resp;
+                    throw new DataFrameParseException(errResp.getErrorMsg(), errResp.getException());
+                }
+
                 ZNetRxResponse rxResp = (ZNetRxResponse) resp;
                 int[] rxData = rxResp.getData();
                 dataFrame = parseFrame(rxResp);

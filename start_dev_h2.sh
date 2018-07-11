@@ -15,4 +15,4 @@ if [ ! -f "${BINARY_DIR}/h2-$VERSION.jar" ]; then
     curl "${DOWNLOAD_URL}" -o "${BINARY_DIR}/h2-$VERSION.jar"
 fi
 
-/usr/bin/java -Xms32m -Xmx64m -cp "${BINARY_DIR}/h2-$VERSION.jar" org.h2.tools.Server -tcp -tcpAllowOthers -web -webAllowOthers -baseDir "$DATABASE_DIR"
+/usr/bin/java -Xms32m -Xmx512m -cp "${BINARY_DIR}/h2-$VERSION.jar" org.h2.tools.Server -tcp -tcpAllowOthers -web -webAllowOthers -baseDir "$DATABASE_DIR"

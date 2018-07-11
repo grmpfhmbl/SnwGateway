@@ -329,10 +329,7 @@ class SosActor extends Actor with MyLogger {
         returnCode match {
           case 0 => {
             logger.debug(s"InsertObservation returned: OK ($returnCode) for ObservationID: ${obs.idsensormeasurement}")
-            //FIXME returnCode should alwas be 0 at this point!
-            val sostransmitted = if (returnCode == 0) true
-                                 else false
-            SensorMeasurement.updateSosState(obs.idsensormeasurement, sostransmitted, returnCode)
+            SensorMeasurement.updateSosState(obs.idsensormeasurement, true, returnCode)
           }
 
           case _ => {
@@ -379,7 +376,7 @@ class SosActor extends Actor with MyLogger {
                     }
                   }
                   case _ =>
-                    logger.warn(s"Error while inserting observation ${obs.idsensormeasurement} into SOS.")
+                    logger.warn(s"Error while inserting observation ${obs.idsensormeasurement} into SOS $returnCode.")
                     SensorMeasurement.updateSosState(obs.idsensormeasurement, false, returnCode)
                 }
             }

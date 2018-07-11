@@ -43,13 +43,15 @@ public class StatusDataFrame extends DataFrame{
         ts = null;
             
     }
+
     public StatusDataFrame(short packedId, XBeeAddress64 addr64, java.sql.Timestamp ts) 
     {
         super(packedId, addr64);
         dataa = new ArrayList<StatusData>();
         this.ts = ts;
     }
-    public ArrayList<StatusData> GetStatusData()
+
+    public ArrayList<StatusData> getStatusData()
     {
         return dataa;
     }
@@ -58,7 +60,7 @@ public class StatusDataFrame extends DataFrame{
     {
         dataa.add(sd);
     }
-    public java.sql.Timestamp GetTimestamp()
+    public java.sql.Timestamp getTimestamp()
     {
         return this.ts;
     }
