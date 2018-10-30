@@ -3,7 +3,7 @@ import com.typesafe.sbt.packager.universal.Keys.{normalizedName, version}
 
 name := """gateway2"""
 
-version := "1.8"
+version := "1.9"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
@@ -28,7 +28,8 @@ libraryDependencies ++= Seq(
   "com.github.jodersky" %% "flow" % "2.2.0",
   "com.github.nscala-time" %% "nscala-time" % "2.0.0",
   //"mysql" % "mysql-connector-java" % "5.1.6"
-  "ch.jodersky" %% "akka-serial-core" % akkaSerialVersion
+  "ch.jodersky" %% "akka-serial-core" % akkaSerialVersion,
+  "org.postgresql" % "postgresql" % "42.2.5"
 )
 
 libraryDependencies ++= Seq(

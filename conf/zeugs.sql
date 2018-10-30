@@ -118,6 +118,22 @@ INSERT INTO SENSORMEASUREMENTS (
     SENSORTYPES_IDSENSORTYPE
   FROM CSVREAD('./measurements.plainfeldgw.csv');
 -- ###################################
+select
+       meastime,
+       sensortypes_idsensortype,
+       sensornodes_idsensornode,
+       count(*),
+       max(idsensormeasurement),
+       min(idsensormeasurement)
+from sensormeasurements
+where idsensormeasurement < 1000000
+group by meastime,
+         sensortypes_idsensortype,
+         sensornodes_idsensornode
+having count(*) > 1
+order by meastime desc;
+
+-- ###################################
 -- delete duplicated meastime/sensornode/sensor entries in database
 delete from sensormeasurements
 where idsensormeasurement in (
@@ -131,6 +147,7 @@ where idsensormeasurement in (
       max(idsensormeasurement) AS id2delete,
       min(idsensormeasurement)
     from sensormeasurements
+    where idsensormeasurement < 2000000
     group by meastime,
       sensortypes_idsensortype,
       sensornodes_idsensornode

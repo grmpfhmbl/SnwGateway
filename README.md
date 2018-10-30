@@ -20,6 +20,37 @@ This is the Sensor Gateway.
 To create the release package just run (_activator.bat_ under Windows)
 
     ./activator dist
+    
+## Preparing Postgres Database for use with Gateway
+
+Create User `gateway` and database `gateway2db`. Database will be empty as schema is created via `evolutions` by the
+gateway itself. Login with psql as `postgres` (or any admin user) and run the following SQL
+
+```SQL
+CREATE USER gateway WITH
+	LOGIN
+	NOSUPERUSER
+	NOCREATEDB
+	NOCREATEROLE
+	INHERIT
+	NOREPLICATION
+	CONNECTION LIMIT 50
+	PASSWORD '<password>';
+	
+	CREATE DATABASE gateway2db
+        WITH 
+        OWNER = postgres
+        ENCODING = 'UTF8'
+        CONNECTION LIMIT = -1;
+    
+    GRANT ALL ON DATABASE gateway2db TO gateway;
+    
+    -- CONNECT TO gateway2db DATABASE NOW ('\c gateway2db' when in psql) AND THEN EXECUTE
+    -- CREATE EXTENSION postgis;    
+```
+
+All needed tables etc will be created on first start of gateway. Initial data must be imported. See _initial-data_
+directory.
 
 ## Installation
 
@@ -28,7 +59,7 @@ well. For Windows and MacOS no guarantee :-)
 
 Copy archive to Raspberry and unzip
 
-```
+```bash
     $ unzip gateway2-1.1.zip
     $ cd gateway2-1.1
     $ chmod +x service_installer/h2server/*.sh
@@ -37,7 +68,7 @@ Copy archive to Raspberry and unzip
 
 Install H2 database service (*NOTE:* at that point in time the installer **HAS** to be run from within its directory)
 
-```
+```bash
     $ cd service_installer/h2server/
     $ sudo ./install_h2_service.sh
     $ sudo systemctl start h2server.service   # start database
