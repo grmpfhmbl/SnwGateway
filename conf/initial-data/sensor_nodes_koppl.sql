@@ -8,6 +8,7 @@
 -- INSERT INTO SENSORNODES VALUES( 1, '0013A20040E69990', 'MeindlGw'        , 'Gateway @Meindlbauer'                , 47.817471, 13.154540, 724.000000);
 -- INSERT INTO SENSORNODES VALUES( 1, '0000000000000000', 'LabStationGW'    , 'Gateway at LabStation'               , 47.823516, 13.039458, 417.000000);
 -- INSERT INTO SENSORNODES VALUES( 9000, '0000000000000000', 'DevGateway'     , 'Local Dev Gateway'                   , 0, 0, 0);
+-- INSERT INTO SENSORNODES VALUES( 1, '0000000000000001', 'SosGateway'     , 'Gateway @SOS-Server'                   , 0, 0, 0);
 
 INSERT INTO SENSORNODES VALUES( 2, '0012100000000001', 'SommerSPA'    , 'Snow Pack Analyzer (Fa. Sommer)'            , 47.817471, 13.154540, 724.000000);
 INSERT INTO SENSORNODES VALUES( 3, '0013A2004061645D', 'Agri01'       , 'Agriculture Board on Waspmote 1.1'          , 47.817471, 13.154540, 724.000000);
@@ -41,6 +42,7 @@ INSERT INTO SENSORNODES VALUES(23, 'IQ1347005'         , 'SontekIQPlainf', 'Sont
 --LAB & test
 -- INSERT INTO SENSORNODES VALUES( 1, '0013A20040BA23BE', 'LabGateway'   , 'Gateway Lab Station'                        , 47.823377, 13.039382, 417.000000);
 INSERT INTO SENSORNODES VALUES(14, '0013A20040616484', 'HydroLab01'   , 'Customboard (Hydroboard) at Lab-Station 01' , 47.823377, 13.039382, 417.000000);
+INSERT INTO SENSORNODES VALUES(24, '0013A2004102ECD9', 'HydroLab02'   , 'Customboard (Hydroboard) at Lab-Station 02' , 47.823377, 13.039382, 417.000000);
 INSERT INTO SENSORNODES VALUES(22, '000011112222333355', 'TaromMockup'  , 'Steca Tarom mockup for testing'           , 47.823377, 13.039382, 417.000000);
 INSERT INTO SENSORNODES VALUES(15, '0012100000000002', 'WIZTest01'    , 'Water Insitu Analyzer - Mock and Testing'   , 47.823377, 13.039382, 417.000000);
 

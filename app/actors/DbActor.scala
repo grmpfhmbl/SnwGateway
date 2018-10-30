@@ -197,7 +197,6 @@ class DbActor extends Actor {
 
   @deprecated
   def createInsertMeasurement(date: String, time: String, fieldid: Long, value: String) {
-
     // wenn das net funzt, dann pfui -> "#" is sortof NoData
     val parseValueTry: Try[Double] = Try(value.toDouble)
 

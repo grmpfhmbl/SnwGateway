@@ -55,7 +55,8 @@ object Global extends GlobalSettings with MyLogger {
     if (SensorNode.getSensorNodeByExtendedAddress(UPLINK_SOS_NODE_EQUIVALENT).isEmpty) {
       logger.error(s"Configured uplink node application.config does not equal uplink node in database.")
       //FIXME this is for sure not the way of doing this correctly...
-      throw new PlayException(s"Configured uplink node application.config does not equal uplink node in database.", s"Configured uplink node application.config does not equal uplink node in database.")
+      throw new PlayException(s"Configured uplink node in application.config (${UPLINK_SOS_NODE_EQUIVALENT}) does not equal uplink node in database.",
+        s"Configured uplink node in application.config (${UPLINK_SOS_NODE_EQUIVALENT}) does not equal uplink node in database.")
     }
 
     logger.info("Creating Supervisor Actor...")
